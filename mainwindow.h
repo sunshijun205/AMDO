@@ -2,12 +2,9 @@
 #define MAINWINDOW_H
 
 #include <QMainWindow>
-
-QT_BEGIN_NAMESPACE
-namespace Ui {
-class MainWindow;
-}
-QT_END_NAMESPACE
+#include <QPushButton>
+#include <QStackedWidget>
+#include <QVector>
 
 class MainWindow : public QMainWindow
 {
@@ -18,6 +15,13 @@ public:
     ~MainWindow() override;
 
 private:
-    Ui::MainWindow *ui;
+    void switchMode(int index);
+    void updateActions(int index);
+
+    QStackedWidget *m_pages = nullptr;
+    QPushButton *m_primary = nullptr;
+    QPushButton *m_secondary = nullptr;
+    QVector<QPushButton *> m_modeButtons;
 };
-#endif // MAINWINDOW_H
+
+#endif

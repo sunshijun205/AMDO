@@ -16,7 +16,23 @@ set(PROJECT_SOURCES
         main.cpp
         mainwindow.cpp
         mainwindow.h
-        mainwindow.ui
+        ui/theme.h
+        ui/uihelpers.h
+        ui/uihelpers.cpp
+        ui/chartwidgets.h
+        ui/chartwidgets.cpp
+        ui/requirementspage.h
+        ui/requirementspage.cpp
+        ui/definitionpage.h
+        ui/definitionpage.cpp
+        ui/analysispage.h
+        ui/analysispage.cpp
+        ui/designpage.h
+        ui/designpage.cpp
+        ui/decisionpage.h
+        ui/decisionpage.cpp
+        ui/workflowpage.h
+        ui/workflowpage.cpp
 )
 
 if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
@@ -43,6 +59,14 @@ else()
 endif()
 
 target_link_libraries(AMDO PRIVATE Qt${QT_VERSION_MAJOR}::Widgets)
+target_include_directories(AMDO PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}
+    ${CMAKE_CURRENT_SOURCE_DIR}/ui
+)
+
+if(MINGW)
+    target_compile_options(AMDO PRIVATE -finput-charset=UTF-8 -fexec-charset=UTF-8)
+endif()
 
 # Qt for iOS sets MACOSX_BUNDLE_GUI_IDENTIFIER automatically since Qt 6.1.
 # If you are developing for iOS or macOS you should consider setting an
