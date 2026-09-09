@@ -24,6 +24,8 @@ Release：换目录 `build-mingw64-release` 与 `-DCMAKE_BUILD_TYPE=Release`（R
 
 新增源文件 → 写入 `PROJECT_SOURCES` → 重新 build（必要时重新 cmake）。
 
+方案备注 MVP 落盘路径（Windows 典型）：`%AppData%/AMDO/飞机概念设计平台/mvp_project_note.txt`。
+
 ## 排查
 
 | 问题 | 处理 |

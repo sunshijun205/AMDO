@@ -7,7 +7,7 @@
 | 项 | 值 |
 |---|---|
 | 名称 | AMDO / 飞机概念设计平台 |
-| 形态 | **纯前端单机** Qt Widgets；当前为 UI 原型（无 Service/持久化/网络） |
+| 形态 | **纯前端单机** Qt Widgets；UI 原型为主；**方案备注**已示范 MVP 分层（无网络） |
 | 语言 | **C++11**（全文统一，禁止混用更低/更高标准语法约定以外的特性） |
 | Qt | **以 Qt 5.15.2 为准**；禁止混用 Qt6-only API。CMake 虽可找 Qt6，升级前不得混用 |
 | 构建 | CMake ≥ 3.16；本机验证：MinGW Makefiles + g++ 8.1.0 |
@@ -16,7 +16,7 @@
 ## 2. 开发红线（摘要）
 
 1. 改前读相关 `docs/`，用搜索确认真实类/文件；**勿假设已有业务层**。
-2. 新业务代码按分层落地（View → Presenter → Service → 本地数据），见 `frontend_constraints.md`。原型期改 UI 时仍优先保持现有 `MainWindow` → `*Page` → `uihelpers`。
+2. 新业务代码按分层落地（View → Presenter → Service → 本地数据），见 `frontend_constraints.md` §10（方案备注样板）。原型期改 UI 时仍优先保持现有 `MainWindow` → `*Page` → `uihelpers`。
 3. View **不写业务、不直接取数**；跨线程更新 UI **必须** `Qt::QueuedConnection`。
 4. 新增/删除源文件必须改 `CMakeLists.txt` 的 `PROJECT_SOURCES`；含 `Q_OBJECT` 靠 AUTOMOC。
 5. UI 以代码布局 + `objectName` + `Theme` QSS 为主；`mainwindow.ui` **未入构建**，勿误改当生效。

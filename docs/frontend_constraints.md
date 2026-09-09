@@ -19,7 +19,7 @@
 | Service | `service/` | 用例编排、状态、缓存、计算调度 | 写 UI；堆存储细节 |
 | 数据 | `model/` + 本地持久 | 纯数据 / 文件 IO | 反向依赖上层；做业务判断 |
 
-**现状**：尚无 `controller/`、`service/`、`model/`；逻辑与演示数据在 `*Page` 内。引入真实能力时**新建分层目录**，勿继续堆进 Page 构造函数。
+**现状**：尚无完整业务栈；**方案备注**已按分层落地（见 §10）。其余逻辑与演示数据多在 `*Page` 内。引入真实能力时**沿用 MVP 目录**，勿继续堆进 Page 构造函数。
 
 通信层 / 后端协议章节：**不适用**（无服务端）。若将来有后端，另开文档，并遵守模板中“异步完成以服务端确认为准”。
 
@@ -57,7 +57,7 @@
 - 参考资料/原型 HTML/调研材料不进源码目录（可放根目录并 gitignore）
 - 不为风格统一批量重命名既有文件
 
-目标目录（引入业务时再创建，勿空建）：
+目标目录（已部分创建；空目录勿预建）：
 
 ```text
 ui/  controller/  service/  model/  util/
@@ -109,3 +109,27 @@ ui/  controller/  service/  model/  util/
 **写前**：哪一层？有无越界？要不要 worker？能否复用 `uihelpers`/已有用例？
 
 **提交前**：语言/Qt 合规；CMake 已更新；QueuedConnection；无 `../` include；最小刷新；无 silent failure；文档已同步；Build 通过。
+
+---
+
+## 10. MVP 示例流程（方案备注）
+
+对照样板：设计需求页顶部「方案备注」。
+
+```text
+用户点击「重新加载」/「保存备注」
+  → ProjectNotePanel 发 loadRequested / saveRequested
+  → ProjectNotePresenter 槽
+  → ProjectNoteService::loadNote / saveNote
+  → ProjectNoteStore 读/写本地文件
+  ← Presenter 调 View：setNote / setStatus / showError；失败时 setBusy(false) 恢复 UI
+```
+
+| 步骤 | 做法 |
+|------|------|
+| 读 | Presenter 构造时及「重新加载」→ Service → Store；`textKnown` 为真才 `setNote` |
+| 提交 | View 只发文本意图，不拼路径、不写文件 |
+| 刷新 | 只更新编辑框与状态行，不重建整页 |
+| 展示 | 成功显示落盘路径；失败 `showError` + 状态行标错 |
+
+新功能请复制此闭环，勿把 Service 调用写进 Page/Panel。

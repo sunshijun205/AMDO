@@ -1,5 +1,9 @@
 #include "requirementspage.h"
 #include "chartwidgets.h"
+#include "controller/projectnotepresenter.h"
+#include "projectnotepanel.h"
+#include "service/projectnoteservice.h"
+#include "model/projectnotestore.h"
 #include "uihelpers.h"
 
 #include <QFrame>
@@ -324,6 +328,12 @@ RequirementsPage::RequirementsPage(QWidget *parent)
         QString::fromUtf8("需求基线"),
         {QString::fromUtf8("SRD 基线 v6"), QString::fromUtf8("市场需求草案")}));
 
+    m_notePanel = new ProjectNotePanel;
+    lay->addWidget(m_notePanel);
+    m_noteStore.reset(new ProjectNoteStore);
+    m_noteService.reset(new ProjectNoteService(m_noteStore.get()));
+    m_notePresenter = new ProjectNotePresenter(m_notePanel, m_noteService.get(), this);
+
     auto *tabs = new SubTabBar({
         {QStringLiteral("mission"), QString::fromUtf8("任务与使用场景")},
         {QStringLiteral("envelope"), QString::fromUtf8("工况与飞行包线")},
@@ -347,3 +357,5 @@ RequirementsPage::RequirementsPage(QWidget *parent)
 
     outer->addWidget(wrapScroll(body));
 }
+
+RequirementsPage::~RequirementsPage() = default;
