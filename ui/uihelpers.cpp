@@ -3,12 +3,14 @@
 
 #include <QAbstractButton>
 #include <QButtonGroup>
+#include <QFont>
 #include <QGridLayout>
 #include <QHBoxLayout>
 #include <QHeaderView>
 #include <QMessageBox>
 #include <QProgressBar>
 #include <QScrollBar>
+#include <QVariant>
 #include <QVBoxLayout>
 
 static void applyStatusColor(QTableWidgetItem *item)
@@ -363,6 +365,73 @@ QTableWidget *makeTable(const QStringList &headers, const QVector<QStringList> &
             table->setItem(r, c, item);
         }
     }
+    return table;
+}
+
+void setTableContents(QTableWidget *table, const QVector<QStringList> &rows, const QVector<QVariant> &rowIds)
+{
+    if (!table)
+        return;
+    table->clearContents();
+    table->setRowCount(rows.size());
+    const int cols = table->columnCount();
+    for (int r = 0; r < rows.size(); ++r) {
+        const QStringList &row = rows[r];
+        for (int c = 0; c < cols; ++c) {
+            auto *item = new QTableWidgetItem(c < row.size() ? row[c] : QString());
+            if (c == 0 && r < rowIds.size())
+                item->setData(Qt::UserRole, rowIds[r]);
+            if (c == 0) {
+                QFont f = item->font();
+                f.setBold(true);
+                item->setFont(f);
+            }
+            if (c == cols - 1)
+                applyStatusColor(item);
+            table->setItem(r, c, item);
+        }
+    }
+    table->setMinimumHeight(qMax(80, 40 + rows.size() * 32));
+}
+
+QVector<QStringList> tableAllRows(const QTableWidget *table)
+{
+    QVector<QStringList> rows;
+    if (!table)
+        return rows;
+    for (int r = 0; r < table->rowCount(); ++r) {
+        QStringList row;
+        for (int c = 0; c < table->columnCount(); ++c) {
+            const QTableWidgetItem *item = table->item(r, c);
+            row.append(item ? item->text() : QString());
+        }
+        rows.append(row);
+    }
+    return rows;
+}
+
+QVariant tableRowId(const QTableWidget *table, int row)
+{
+    if (!table || row < 0 || row >= table->rowCount())
+        return QVariant();
+    const QTableWidgetItem *item = table->item(row, 0);
+    return item ? item->data(Qt::UserRole) : QVariant();
+}
+
+QTableWidget *makeEditableTable(const QStringList &headers, QWidget *parent)
+{
+    auto *table = new QTableWidget(0, headers.size(), parent);
+    table->setHorizontalHeaderLabels(headers);
+    table->verticalHeader()->setVisible(false);
+    table->setShowGrid(false);
+    table->setSelectionBehavior(QAbstractItemView::SelectRows);
+    table->setSelectionMode(QAbstractItemView::SingleSelection);
+    table->setEditTriggers(QAbstractItemView::DoubleClicked | QAbstractItemView::EditKeyPressed | QAbstractItemView::SelectedClicked);
+    table->setAlternatingRowColors(false);
+    table->horizontalHeader()->setStretchLastSection(true);
+    table->horizontalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
+    table->verticalHeader()->setDefaultSectionSize(32);
+    table->setMinimumHeight(80);
     return table;
 }
 

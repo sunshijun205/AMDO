@@ -38,12 +38,14 @@ protected:
 
 class EnvelopeChart : public QWidget
 {
-    Q_OBJECT
 public:
     explicit EnvelopeChart(QWidget *parent = nullptr);
     QSize sizeHint() const override { return QSize(600, 230); }
+    void setPoints(const QVector<QPointF> &machAltitudeKm);
 protected:
     void paintEvent(QPaintEvent *event) override;
+private:
+    QVector<QPointF> m_points;
 };
 
 class AircraftTopView : public QWidget
@@ -72,6 +74,7 @@ class MissionRail : public QWidget
 public:
     explicit MissionRail(const QStringList &segments, QWidget *parent = nullptr);
     QSize sizeHint() const override { return QSize(700, 70); }
+    void setSegments(const QStringList &segments);
 protected:
     void paintEvent(QPaintEvent *event) override;
 private:

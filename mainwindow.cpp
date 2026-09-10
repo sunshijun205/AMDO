@@ -15,7 +15,7 @@
 #include <QMenuBar>
 #include <QStatusBar>
 #include <QVBoxLayout>
-#include <QVector>
+#include <QMessageBox>
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
@@ -48,8 +48,8 @@ MainWindow::MainWindow(QWidget *parent)
     project->setObjectName(QStringLiteral("ProjectLabel"));
     m_secondary = makeButton(QString::fromUtf8("导入需求"));
     m_primary = makeButton(QString::fromUtf8("发布需求基线"), true);
-    wireDummyAction(m_secondary, this);
-    wireDummyAction(m_primary, this);
+    connect(m_secondary, &QPushButton::clicked, this, &MainWindow::onSecondaryClicked);
+    connect(m_primary, &QPushButton::clicked, this, &MainWindow::onPrimaryClicked);
     tl->addWidget(brand);
     tl->addWidget(divider);
     tl->addWidget(project);
@@ -85,7 +85,8 @@ MainWindow::MainWindow(QWidget *parent)
     }
 
     m_pages = new QStackedWidget;
-    m_pages->addWidget(new RequirementsPage);
+    m_requirementsPage = new RequirementsPage;
+    m_pages->addWidget(m_requirementsPage);
     m_pages->addWidget(new DefinitionPage);
     m_pages->addWidget(new AnalysisPage);
     m_pages->addWidget(new DesignPage);
@@ -121,4 +122,24 @@ void MainWindow::updateActions(int index)
     };
     m_primary->setText(QString::fromUtf8(primary[index]));
     m_secondary->setText(QString::fromUtf8(secondary[index]));
+}
+
+void MainWindow::onPrimaryClicked()
+{
+    if (m_pages->currentIndex() == 0 && m_requirementsPage) {
+        m_requirementsPage->requestPublish();
+        return;
+    }
+    QMessageBox::information(this, QString::fromUtf8("飞机概念设计平台"),
+                             m_primary->text() + QString::fromUtf8(" — 原型交互已记录。"));
+}
+
+void MainWindow::onSecondaryClicked()
+{
+    if (m_pages->currentIndex() == 0 && m_requirementsPage) {
+        m_requirementsPage->requestImport();
+        return;
+    }
+    QMessageBox::information(this, QString::fromUtf8("飞机概念设计平台"),
+                             m_secondary->text() + QString::fromUtf8(" — 原型交互已记录。"));
 }

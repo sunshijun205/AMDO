@@ -2,7 +2,7 @@
 
 飞机概念设计平台（Qt Widgets）知识库。Agent 先读 [`../AGENTS.md`](../AGENTS.md)。
 
-**现状**：六大功能 UI 原型为主；**方案备注**已按 View→Presenter→Service→本地文件落地（见设计需求页）。其余按钮多为 `wireDummyAction`。无网络。
+**现状**：六大功能 UI 原型为主；**方案备注**与**设计需求 SRD**已按 View→Presenter→Service→本地文件落地（见设计需求页）。其余按钮多为 `wireDummyAction`。无网络。
 
 ## 工程文档
 
@@ -20,6 +20,7 @@
 | 业务 id | 文档 |
 |---------|------|
 | `mvp_project_note` | [business/mvp_project_note.md](business/mvp_project_note.md) |
+| `srd_requirements` | [business/srd_requirements.md](business/srd_requirements.md) |
 
 完整列表与加载约定见 [business/README.md](business/README.md)。
 

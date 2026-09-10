@@ -18,5 +18,6 @@
 | id / 文件 | 业务 | 入口 UI |
 |-----------|------|---------|
 | [mvp_project_note.md](mvp_project_note.md) | 方案备注（MVP 分层样板） | 设计需求页顶部 `ProjectNotePanel` |
+| [srd_requirements.md](srd_requirements.md) | 设计需求 SRD（任务/包线/规范/指标） | 主导航「设计需求」 |
 
 新增业务时：在本目录新增同名 md，并在上表登记一行。

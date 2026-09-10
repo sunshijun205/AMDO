@@ -6,6 +6,8 @@
 #include <QStackedWidget>
 #include <QVector>
 
+class RequirementsPage;
+
 class MainWindow : public QMainWindow
 {
     Q_OBJECT
@@ -17,8 +19,11 @@ public:
 private:
     void switchMode(int index);
     void updateActions(int index);
+    void onPrimaryClicked();
+    void onSecondaryClicked();
 
     QStackedWidget *m_pages = nullptr;
+    RequirementsPage *m_requirementsPage = nullptr;
     QPushButton *m_primary = nullptr;
     QPushButton *m_secondary = nullptr;
     QVector<QPushButton *> m_modeButtons;

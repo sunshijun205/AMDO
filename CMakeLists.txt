@@ -30,6 +30,21 @@ set(PROJECT_SOURCES
         ui/chartwidgets.cpp
         ui/projectnotepanel.h
         ui/projectnotepanel.cpp
+        model/srdtypes.h
+        model/srdcatalogs.h
+        model/srdcatalogs.cpp
+        model/srdstore.h
+        model/srdstore.cpp
+        service/srddocumentservice.h
+        service/srddocumentservice.cpp
+        service/srdcompletenessservice.h
+        service/srdcompletenessservice.cpp
+        service/srdderivationservice.h
+        service/srdderivationservice.cpp
+        service/srdimportexportservice.h
+        service/srdimportexportservice.cpp
+        controller/requirementspresenter.h
+        controller/requirementspresenter.cpp
         ui/requirementspage.h
         ui/requirementspage.cpp
         ui/definitionpage.h

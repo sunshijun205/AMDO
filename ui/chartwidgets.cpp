@@ -160,6 +160,12 @@ EnvelopeChart::EnvelopeChart(QWidget *parent)
     setMinimumHeight(220);
 }
 
+void EnvelopeChart::setPoints(const QVector<QPointF> &machAltitudeKm)
+{
+    m_points = machAltitudeKm;
+    update();
+}
+
 void EnvelopeChart::paintEvent(QPaintEvent *)
 {
     QPainter p(this);
@@ -172,27 +178,59 @@ void EnvelopeChart::paintEvent(QPaintEvent *)
     for (int i = 1; i <= 3; ++i)
         p.drawLine(l, b - (b - t) * i / 4, r, b - (b - t) * i / 4);
 
-    auto map = [&](qreal x, qreal y) {
-        return QPointF(l + (x - 70) / 470.0 * (r - l), t + (y - 20) / 180.0 * (b - t));
+    QVector<QPointF> pts = m_points;
+    if (pts.isEmpty()) {
+        p.setPen(Theme::muted());
+        p.setFont(QFont(QStringLiteral("Microsoft YaHei"), 9));
+        p.drawText(QRect(l, height() - 22, r - l, 18), Qt::AlignHCenter,
+                   QString::fromUtf8("马赫数 Ma"));
+        p.save();
+        p.translate(16, (t + b) / 2);
+        p.rotate(-90);
+        p.drawText(QRect(-40, -10, 80, 20), Qt::AlignCenter, QString::fromUtf8("高度 km"));
+        p.restore();
+        return;
+    }
+
+    qreal minMa = pts[0].x(), maxMa = pts[0].x();
+    qreal minH = pts[0].y(), maxH = pts[0].y();
+    for (int i = 1; i < pts.size(); ++i) {
+        minMa = qMin(minMa, pts[i].x());
+        maxMa = qMax(maxMa, pts[i].x());
+        minH = qMin(minH, pts[i].y());
+        maxH = qMax(maxH, pts[i].y());
+    }
+    if (maxMa - minMa < 1e-6) {
+        minMa -= 0.1;
+        maxMa += 0.1;
+    }
+    if (maxH - minH < 1e-6) {
+        minH = 0;
+        maxH = 12;
+    }
+    minMa = qMax(0.0, minMa - 0.05);
+    maxMa += 0.05;
+    minH = qMax(0.0, minH - 0.5);
+    maxH += 0.5;
+
+    auto map = [&](qreal ma, qreal h) {
+        return QPointF(l + (ma - minMa) / (maxMa - minMa) * (r - l),
+                       b - (h - minH) / (maxH - minH) * (b - t));
     };
+
     QPainterPath path;
-    const QPointF pts[] = {
-        {88, 188}, {115, 148}, {176, 95}, {282, 47}, {438, 34},
-        {520, 72}, {494, 126}, {420, 169}, {292, 188}
-    };
     path.moveTo(map(pts[0].x(), pts[0].y()));
-    for (int i = 1; i < 9; ++i)
+    for (int i = 1; i < pts.size(); ++i)
         path.lineTo(map(pts[i].x(), pts[i].y()));
     path.closeSubpath();
     p.setBrush(Theme::accentSoft());
     p.setPen(QPen(Theme::accent(), 1.5));
     p.drawPath(path);
     p.setPen(Qt::NoPen);
-    p.setBrush(Theme::accent());
-    p.drawEllipse(map(438, 34), 5, 5);
-    p.drawEllipse(map(420, 169), 5, 5);
-    p.setBrush(Theme::blue());
-    p.drawEllipse(map(282, 47), 5, 5);
+    for (int i = 0; i < pts.size(); ++i) {
+        p.setBrush(i == 0 ? Theme::blue() : Theme::accent());
+        p.drawEllipse(map(pts[i].x(), pts[i].y()), 5, 5);
+    }
 
     p.setPen(Theme::muted());
     p.setFont(QFont(QStringLiteral("Microsoft YaHei"), 9));
@@ -315,6 +353,12 @@ MissionRail::MissionRail(const QStringList &segments, QWidget *parent)
     , m_segments(segments)
 {
     setMinimumHeight(64);
+}
+
+void MissionRail::setSegments(const QStringList &segments)
+{
+    m_segments = segments;
+    update();
 }
 
 void MissionRail::paintEvent(QPaintEvent *)

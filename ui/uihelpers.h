@@ -12,6 +12,7 @@
 #include <QScrollArea>
 #include <QStringList>
 #include <QTableWidget>
+#include <QVariant>
 #include <QVector>
 #include <QWidget>
 
@@ -54,6 +55,11 @@ QWidget *makeMiniFields(const QList<QWidget *> &fields, int columns = 2, QWidget
 QWidget *makeProgressRow(const QString &label, const QString &value, int percent, QWidget *parent = nullptr);
 QTableWidget *makeTable(const QStringList &headers, const QVector<QStringList> &rows,
                         const TableOptions &options = {}, QWidget *parent = nullptr);
+void setTableContents(QTableWidget *table, const QVector<QStringList> &rows,
+                      const QVector<QVariant> &rowIds = {});
+QVector<QStringList> tableAllRows(const QTableWidget *table);
+QVariant tableRowId(const QTableWidget *table, int row);
+QTableWidget *makeEditableTable(const QStringList &headers, QWidget *parent = nullptr);
 QScrollArea *wrapScroll(QWidget *content, QWidget *parent = nullptr);
 QWidget *makeStatusText(const QString &text, bool warn = false, QWidget *parent = nullptr);
 QLabel *makeChip(const QString &text, bool neutral = false, QWidget *parent = nullptr);
