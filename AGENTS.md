@@ -38,7 +38,9 @@ cmake --build build-mingw64 --target AMDO
 
 ## 4. 文档
 
-- 知识库：`docs/frontend_constraints.md`、`architecture.md`、`ui.md`、`build.md`。结构/接口变更须同步。
+- 知识库：`docs/frontend_constraints.md`、`architecture.md`、`ui.md`、`build.md`；业务说明见 `docs/business/`（入口 [`docs/README.md`](docs/README.md)）。
+- 改业务时按需加载 `docs/business/<id>.md`（如 `mvp_project_note`），勿一次读完全部业务文。
+- 结构/接口/业务 API 变更须同步对应 docs。
 - 文档与代码冲突时：**以代码为准**并改文档。
 - 不确定写 **TODO / 待确认**，禁止臆造。
 
