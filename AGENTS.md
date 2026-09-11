@@ -7,7 +7,7 @@
 | 项 | 值 |
 |---|---|
 | 名称 | AMDO / 飞机概念设计平台 |
-| 形态 | **纯前端单机** Qt Widgets；UI 原型为主；**方案备注**已示范 MVP 分层（无网络） |
+| 形态 | **纯前端单机** Qt Widgets；UI 原型为主；**设计需求 SRD**已示范 MVP 分层（无网络） |
 | 语言 | **C++11**（全文统一，禁止混用更低/更高标准语法约定以外的特性） |
 | Qt | **以 Qt 5.15.2 为准**；禁止混用 Qt6-only API。CMake 虽可找 Qt6，升级前不得混用 |
 | 构建 | CMake ≥ 3.16；本机验证：MinGW Makefiles + g++ 8.1.0 |
@@ -16,7 +16,7 @@
 ## 2. 开发红线（摘要）
 
 1. 改前读相关 `docs/`，用搜索确认真实类/文件；**勿假设已有业务层**。
-2. 新业务代码按分层落地（View → Presenter → Service → 本地数据），见 `frontend_constraints.md` §10（方案备注样板）。原型期改 UI 时仍优先保持现有 `MainWindow` → `*Page` → `uihelpers`。
+2. 新业务代码按分层落地（View → Presenter → Service → 本地数据），见 `frontend_constraints.md` §10（设计需求 SRD 样板）。原型期改 UI 时仍优先保持现有 `MainWindow` → `*Page` → `uihelpers`。
 3. View **不写业务、不直接取数**；跨线程更新 UI **必须** `Qt::QueuedConnection`。
 4. 新增/删除源文件必须改 `CMakeLists.txt` 的 `PROJECT_SOURCES`；含 `Q_OBJECT` 靠 AUTOMOC。
 5. UI 以代码布局 + `objectName` + `Theme` QSS 为主；`mainwindow.ui` **未入构建**，勿误改当生效。
@@ -30,19 +30,21 @@
 $env:Path = "C:\Qt\Tools\mingw810_64\bin;C:\Qt\5.15.2\mingw81_64\bin;C:\Qt\Tools\CMake_64\bin;" + $env:Path
 cmake -S . -B build-mingw64 -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE=Debug -DCMAKE_PREFIX_PATH="C:/Qt/5.15.2/mingw81_64"
 cmake --build build-mingw64 --target AMDO
+# Build 成功后自动运行：先清理旧实例，再后台启动（勿阻塞；需 Qt bin 已在 PATH）
+Stop-Process -Name AMDO -Force -ErrorAction SilentlyContinue
+Start-Process -FilePath ".\build-mingw64\AMDO.exe"
 ```
 
 路径因机器而异。详见 [`docs/build.md`](docs/build.md)。
 
-改完必须 Build；失败则分析→修复→再编，禁止只报“编译失败”。
+改完必须 Build；失败则分析→修复→再编，禁止只报“编译失败”。**Build 成功后须直接运行生成的 `build-mingw64\AMDO.exe`（启动前先 `Stop-Process -Name AMDO` 清理旧实例，再用 `Start-Process` 后台启动，不阻塞会话；仅在 Build 通过时运行），免去手动打开 Qt。**
 
 ## 4. 文档
 
 - 知识库：`docs/frontend_constraints.md`、`architecture.md`、`ui.md`、`build.md`；业务说明见 `docs/business/`（入口 [`docs/README.md`](docs/README.md)）。
-- 改业务时按需加载 `docs/business/<id>.md`（如 `mvp_project_note`），勿一次读完全部业务文。
+- 改业务时按需加载 `docs/business/<id>.md`（如 `srd_requirements`），勿一次读完全部业务文。
 - 结构/接口/业务 API 变更须同步对应 docs。
 - 文档与代码冲突时：**以代码为准**并改文档。
-- 不确定写 **TODO / 待确认**，禁止臆造。
 
 ## 5. Checklist
 

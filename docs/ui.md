@@ -14,27 +14,16 @@
 ## 子页
 
 多数 Page：`makeHeading` + `SubTabBar`（`currentChanged`）+ 内层 `QStackedWidget` + `wrapScroll`。  
-除方案备注与设计需求 SRD 外，六个 Page 构造时组装静态 UI；无对外业务 signal。
+除设计需求 SRD 外，六个 Page 构造时组装静态 UI；无对外业务 signal。
 
 | Page | 子页 id |
 |------|---------|
-| Requirements | mission / envelope / standards / metrics；页顶嵌入 `ProjectNotePanel` |
+| Requirements | mission / envelope / standards / metrics |
 | Definition | semantic / configuration / geometry / visualization |
 | Analysis | 无 SubTab；左侧学科切换 |
 | Design | variables / exploration / optimization / mdo |
 | Decision | single / compare / report |
 | Workflow | definition / execution / monitor |
-
-## MVP：方案备注
-
-| 层 | 类型 | 要点 |
-|----|------|------|
-| View | `ProjectNotePanel` | 信号 `loadRequested` / `saveRequested`；槽 `setNote` / `setBusy` / `setStatus` / `showError` |
-| Presenter | `ProjectNotePresenter` | 连接 View 信号；调用 Service；只刷新备注区 |
-| Service | `ProjectNoteService` | `loadNote` / `saveNote`（`bool` + `QString* errorMessage`） |
-| 数据 | `ProjectNote` + `ProjectNoteStore` | POD；读写 `%AppData%/AMDO/飞机概念设计平台/mvp_project_note.txt` |
-
-组装：`RequirementsPage` 持有 Store/Service（`unique_ptr`）与 Presenter（`QObject` 子对象），**View 不直接调 Service**。
 
 ## 设计需求 SRD
 
@@ -44,6 +33,8 @@
 | Presenter | `RequirementsPresenter` | 连接信号；完整性不通过则禁止发布 |
 | Service | `SrdDocumentService` 等 | 草稿 JSON、基线、建议合并、评价规格导出 |
 | 数据 | `SrdDocument` + `SrdStore` | `%AppData%/AMDO/飞机概念设计平台/srd/` |
+
+组装：`RequirementsPage` 持有 Store/Service（`unique_ptr`）与 Presenter（`QObject` 子对象），**View 不直接调 Service**。
 
 业务细节见 [business/srd_requirements.md](business/srd_requirements.md)。
 

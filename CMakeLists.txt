@@ -16,20 +16,11 @@ set(PROJECT_SOURCES
         main.cpp
         mainwindow.cpp
         mainwindow.h
-        model/projectnote.h
-        model/projectnotestore.h
-        model/projectnotestore.cpp
-        service/projectnoteservice.h
-        service/projectnoteservice.cpp
-        controller/projectnotepresenter.h
-        controller/projectnotepresenter.cpp
         ui/theme.h
         ui/uihelpers.h
         ui/uihelpers.cpp
         ui/chartwidgets.h
         ui/chartwidgets.cpp
-        ui/projectnotepanel.h
-        ui/projectnotepanel.cpp
         model/srdtypes.h
         model/srdcatalogs.h
         model/srdcatalogs.cpp

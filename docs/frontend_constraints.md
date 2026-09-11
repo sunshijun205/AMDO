@@ -19,7 +19,7 @@
 | Service | `service/` | 用例编排、状态、缓存、计算调度 | 写 UI；堆存储细节 |
 | 数据 | `model/` + 本地持久 | 纯数据 / 文件 IO | 反向依赖上层；做业务判断 |
 
-**现状**：尚无完整业务栈；**方案备注**与**设计需求 SRD**已按分层落地（见 §10）。其余逻辑与演示数据多在 `*Page` 内。引入真实能力时**沿用 MVP 目录**，勿继续堆进 Page 构造函数。
+**现状**：**设计需求 SRD**已按分层落地（见 §10），是唯一完整业务栈样板。其余逻辑与演示数据多在 `*Page` 内。引入真实能力时**沿用分层目录**，勿继续堆进 Page 构造函数。
 
 通信层 / 后端协议章节：**不适用**（无服务端）。若将来有后端，另开文档，并遵守模板中“异步完成以服务端确认为准”。
 
@@ -112,24 +112,24 @@ ui/  controller/  service/  model/  util/
 
 ---
 
-## 10. MVP 示例流程（方案备注）
+## 10. 分层示例流程（设计需求 SRD）
 
-对照样板：设计需求页顶部「方案备注」。
+对照样板：设计需求页的任务/包线/规范/指标四子页。
 
 ```text
-用户点击「重新加载」/「保存备注」
-  → ProjectNotePanel 发 loadRequested / saveRequested
-  → ProjectNotePresenter 槽
-  → ProjectNoteService::loadNote / saveNote
-  → ProjectNoteStore 读/写本地文件
-  ← Presenter 调 View：setNote / setStatus / showError；失败时 setBusy(false) 恢复 UI
+用户点击「保存XX章」/「从任务生成建议…」/「发布需求基线」
+  → RequirementsPage 发 saveXxxRequested / generateXxxRequested / publishRequested（并 snapshot*Chapter）
+  → RequirementsPresenter 槽
+  → SrdDocumentService / SrdDerivationService / SrdCompletenessService / SrdImportExportService
+  → SrdStore 读/写 srd_draft.json 与 baselines/
+  ← Presenter 调 View：setDocument / setCompleteness / setStatus / showError；失败时 setBusy(false) 恢复 UI
 ```
 
 | 步骤 | 做法 |
 |------|------|
-| 读 | Presenter 构造时及「重新加载」→ Service → Store；`textKnown` 为真才 `setNote` |
-| 提交 | View 只发文本意图，不拼路径、不写文件 |
-| 刷新 | 只更新编辑框与状态行，不重建整页 |
-| 展示 | 成功显示落盘路径；失败 `showError` + 状态行标错 |
+| 读 | Presenter 构造时及切换基线 → Service → Store；`*Known` 为真才回填控件 |
+| 提交 | View 只 `snapshot*Chapter` 发结构体意图，不拼路径、不写文件 |
+| 刷新 | 只更新受影响子页/表格与状态行，不重建整页 |
+| 展示 | 成功显示落盘/发布路径；失败 `showError` + 状态行标错 |
 
-新功能请复制此闭环，勿把 Service 调用写进 Page/Panel。
+新功能请复制此闭环，勿把 Service 调用写进 Page。

@@ -8,10 +8,6 @@
 
 class EnvelopeChart;
 class MissionRail;
-class ProjectNotePanel;
-class ProjectNotePresenter;
-class ProjectNoteService;
-class ProjectNoteStore;
 class QComboBox;
 class QLabel;
 class QLineEdit;
@@ -105,11 +101,6 @@ private:
     SrdDocument m_shown;
     bool m_readOnly = false;
     bool m_updating = false;
-
-    ProjectNotePanel *m_notePanel = nullptr;
-    std::unique_ptr<ProjectNoteStore> m_noteStore;
-    std::unique_ptr<ProjectNoteService> m_noteService;
-    ProjectNotePresenter *m_notePresenter = nullptr;
 
     std::unique_ptr<SrdStore> m_srdStore;
     std::unique_ptr<SrdDocumentService> m_srdDocument;

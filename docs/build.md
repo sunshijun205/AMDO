@@ -20,11 +20,11 @@ Release：换目录 `build-mingw64-release` 与 `-DCMAKE_BUILD_TYPE=Release`（R
 
 清理：`Remove-Item -Recurse -Force build-mingw64` 或 `cmake --build build-mingw64 --target clean`。
 
-运行：PATH 含 Qt `bin` 后执行 `.\build-mingw64\AMDO.exe`。
+运行：PATH 含 Qt `bin` 后执行 `.\build-mingw64\AMDO.exe`。**约定：Build 通过后先 `Stop-Process -Name AMDO -Force -ErrorAction SilentlyContinue` 清理旧实例，再用 `Start-Process ".\build-mingw64\AMDO.exe"` 后台启动，免手动开 Qt；仅在 Build 成功时运行，且不阻塞会话。**
 
 新增源文件 → 写入 `PROJECT_SOURCES` → 重新 build（必要时重新 cmake）。
 
-方案备注 MVP 落盘路径（Windows 典型）：`%AppData%/AMDO/飞机概念设计平台/mvp_project_note.txt`。
+设计需求 SRD 落盘路径（Windows 典型）：`%AppData%/AMDO/飞机概念设计平台/srd/`（`srd_draft.json` 与 `baselines/`）。
 
 ## 排查
 

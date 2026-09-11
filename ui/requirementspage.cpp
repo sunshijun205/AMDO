@@ -1,13 +1,9 @@
 #include "requirementspage.h"
 
 #include "chartwidgets.h"
-#include "controller/projectnotepresenter.h"
 #include "controller/requirementspresenter.h"
-#include "model/projectnotestore.h"
 #include "model/srdcatalogs.h"
 #include "model/srdstore.h"
-#include "projectnotepanel.h"
-#include "service/projectnoteservice.h"
 #include "service/srdcompletenessservice.h"
 #include "service/srdderivationservice.h"
 #include "service/srddocumentservice.h"
@@ -97,10 +93,6 @@ RequirementsPage::RequirementsPage(QWidget *parent)
 {
     buildUi();
 
-    m_noteStore.reset(new ProjectNoteStore);
-    m_noteService.reset(new ProjectNoteService(m_noteStore.get()));
-    m_notePresenter = new ProjectNotePresenter(m_notePanel, m_noteService.get(), this);
-
     m_srdStore.reset(new SrdStore);
     m_srdDocument.reset(new SrdDocumentService(m_srdStore.get()));
     m_srdCompleteness.reset(new SrdCompletenessService);
@@ -174,9 +166,6 @@ void RequirementsPage::buildUi()
     connect(m_baselineBox, static_cast<void (QComboBox::*)(int)>(&QComboBox::currentIndexChanged),
             this, &RequirementsPage::onBaselineChanged);
     connect(m_copyDraftBtn, &QPushButton::clicked, this, &RequirementsPage::copyBaselineRequested);
-
-    m_notePanel = new ProjectNotePanel;
-    lay->addWidget(m_notePanel);
 
     auto *tabs = new SubTabBar({
         {QStringLiteral("mission"), QString::fromUtf8("任务与使用场景")},

@@ -44,7 +44,7 @@ MainWindow（导入 / 发布）
 | `SrdDerivationService` | Service | `service/srdderivationservice.*` | 跨章建议（不写盘） |
 | `SrdImportExportService` | Service | `service/srdimportexportservice.*` | 导入导出 |
 | `RequirementsPresenter` | Presenter | `controller/requirementspresenter.*` | 接 View 信号 |
-| `RequirementsPage` | View | `ui/requirementspage.*` | 四子页展示与意图；托管方案备注 MVP |
+| `RequirementsPage` | View | `ui/requirementspage.*` | 四子页展示与意图 |
 
 ## 4. 关键规则
 

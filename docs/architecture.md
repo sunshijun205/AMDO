@@ -5,9 +5,7 @@
 单进程 Qt Widgets：**main → MainWindow → 六个 Page → uihelpers / Theme / chartwidgets**。  
 多数页面仍为 UI 原型（演示数据在 `*page.cpp`，操作多经 `wireDummyAction`）。
 
-**MVP 示例（已落地）**：设计需求页顶部的「方案备注」闭环——`ProjectNotePanel`(View) → `ProjectNotePresenter` → `ProjectNoteService` → `ProjectNoteStore`（本地文件）。
-
-**设计需求 SRD（已落地）**：同一页的任务/包线/规范/指标——`RequirementsPage` → `RequirementsPresenter` → `SrdDocumentService` / `SrdDerivationService` / `SrdCompletenessService` / `SrdImportExportService` → `SrdStore`（`srd_draft.json` + `baselines/`）。其余功能域仍为原型。
+**分层样板（已落地）**：设计需求 SRD 是唯一完整的 View→Presenter→Service→本地数据 闭环——`RequirementsPage` → `RequirementsPresenter` → `SrdDocumentService` / `SrdDerivationService` / `SrdCompletenessService` / `SrdImportExportService` → `SrdStore`（`srd_draft.json` + `baselines/`）。其余功能域仍为原型。
 
 ```mermaid
 graph TD
@@ -21,10 +19,6 @@ graph TD
   Stack --> W[WorkflowPage]
   R & D & A & O & C & W --> H[uihelpers / Theme]
   R & D & O & C --> Ch[chartwidgets]
-  R --> Panel[ProjectNotePanel]
-  Panel -.->|信号| P[ProjectNotePresenter]
-  P --> S[ProjectNoteService]
-  S --> Store[ProjectNoteStore / 本地文件]
   R -.->|信号| RP[RequirementsPresenter]
   RP --> SrdDoc[SrdDocumentService]
   RP --> SrdDer[SrdDerivationService]
@@ -37,8 +31,7 @@ graph TD
 **数据流**：
 
 - 原型页：源码字面量 → Page 构造组装 → 屏幕显示；表单可改但不写回模型。
-- MVP 备注：用户操作 → View 信号 → Presenter → Service → 本地文件；结果经 Presenter 调用 View 的 `setXxx` 最小刷新。
-- 设计需求 SRD：四子页编辑 → snapshot 章节 → Presenter → Service 落盘；KPI/检查单由 Completeness 按草稿计算；发布写入不可变基线并导出 evaluation-spec。
+- 设计需求 SRD：四子页编辑 → snapshot 章节 → Presenter → Service 落盘；结果经 Presenter 调用 View 的 `setXxx` 最小刷新；KPI/检查单由 Completeness 按草稿计算；发布写入不可变基线并导出 evaluation-spec。
 
 **配置**：无通用运行时配置 / `QSettings` 业务解析。CMake 固定 AUTOMOC/UIC/RCC、`Qt::Widgets`、include=`./` 与 `./ui`、MinGW UTF-8。`main` 设置 `OrganizationName=AMDO`（供 AppData 路径）。硬编码：`Theme`、窗口尺寸、各页演示字段。UI 上的「执行环境/许可证」等仅为演示。
 
@@ -53,14 +46,13 @@ AMDO/
 ├── main.cpp
 ├── mainwindow.h/.cpp
 ├── mainwindow.ui           # 未加入 PROJECT_SOURCES
-├── model/                  # 本地数据（备注 + SRD）
-├── service/                # 用例（备注 + SRD）
-├── controller/             # Presenter（备注 + SRD）
+├── model/                  # 本地数据（SRD）
+├── service/                # 用例（SRD）
+├── controller/             # Presenter（SRD）
 ├── ui/                     # 页面与公共 UI
 │   ├── theme.h
 │   ├── uihelpers.*
 │   ├── chartwidgets.*
-│   ├── projectnotepanel.*  # MVP View
 │   └── *page.*
 ├── docs/
 └── build-mingw64/
@@ -77,35 +69,31 @@ AMDO/
 | 主题 | `ui/theme.h` | `Theme` | 颜色 + 全局 QSS |
 | UI 工厂 | `ui/uihelpers.*` | `SubTabBar` 等 | 面板/表格/KPI/假动作 |
 | 图表 | `ui/chartwidgets.*` | `*Chart` 等 | 示意绘制 |
-| 设计需求 | `ui/requirementspage.*` | `RequirementsPage` | 任务/包线/规范/指标；托管 MVP 备注与 SRD |
+| 设计需求 | `ui/requirementspage.*` | `RequirementsPage` | 任务/包线/规范/指标；托管 SRD 分层 |
 | SRD Presenter | `controller/requirementspresenter.*` | `RequirementsPresenter` | 编排 SRD 用例与刷新 |
 | SRD Service | `service/srd*.*` | `SrdDocumentService` 等 | 草稿/派生/检查/导入导出 |
 | SRD 数据 | `model/srd*` | `SrdDocument` / `SrdStore` / `SrdCatalogs` | POD + JSON + 种子目录 |
-| MVP View | `ui/projectnotepanel.*` | `ProjectNotePanel` | 备注展示与意图信号 |
-| MVP Presenter | `controller/projectnotepresenter.*` | `ProjectNotePresenter` | 编排加载/保存与刷新 |
-| MVP Service | `service/projectnoteservice.*` | `ProjectNoteService` | 备注用例 |
-| MVP 数据 | `model/projectnote*` | `ProjectNote` / `Store` | POD + 文件 IO |
 | 方案定义 | `ui/definitionpage.*` | `DefinitionPage` | 语义/构型/几何/视图 |
 | 学科分析 | `ui/analysispage.*` | `AnalysisPage` | 六学科侧栏+表单 |
 | 方案优化 | `ui/designpage.*` | `DesignPage` | 变量/探索/优化/MDO |
 | 方案决策 | `ui/decisionpage.*` | `DecisionPage` | 评价/比较/报告 |
 | 工作流 | `ui/workflowpage.*` | `WorkflowPage` | 编排/执行/监控 |
 
-落点：顶栏/导航 → `mainwindow.cpp`；样式 → `theme.h`；某功能 → 对应 page；复用 → `uihelpers`/`chartwidgets`；新业务分层 → 对照 MVP 备注。  
+落点：顶栏/导航 → `mainwindow.cpp`；样式 → `theme.h`；某功能 → 对应 page；复用 → `uihelpers`/`chartwidgets`；新业务分层 → 对照 SRD 样板。  
 改导航索引时同步 `updateActions` 文案；改 `objectName` 同步 `Theme`。
 
 **未实现**：求解器、调度引擎、完整工程文件 IO、网络。
 
-页面组织与内部接口见 [ui.md](ui.md)。分层约束与 MVP 流程见 [frontend_constraints.md](frontend_constraints.md)。
+页面组织与内部接口见 [ui.md](ui.md)。分层约束与样板流程见 [frontend_constraints.md](frontend_constraints.md)。
 
 ## 目标分层
 
-新业务应落在 `controller/` / `service/` / `model/`，以 MVP 备注为样板，禁止继续把用例堆进 Page。
+新业务应落在 `controller/` / `service/` / `model/`，以设计需求 SRD 为样板，禁止继续把用例堆进 Page。
 
 ## 风险
 
 - 演示数据分散、Page 文件偏大
 - 启动即构造六页（日后可懒加载，TODO）
 - 闲置 `.ui` 易误导
-- 仅备注一条链路完成分层，其余仍为原型
+- 仅设计需求 SRD 一条链路完成分层，其余仍为原型
 - 设计需求已按 SRD 闭环落地；分析/优化/决策尚未消费 evaluation-spec
