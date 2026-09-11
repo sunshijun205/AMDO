@@ -33,9 +33,9 @@ graph TD
 - 原型页：源码字面量 → Page 构造组装 → 屏幕显示；表单可改但不写回模型。
 - 设计需求 SRD：四子页编辑 → snapshot 章节 → Presenter → Service 落盘；结果经 Presenter 调用 View 的 `setXxx` 最小刷新；KPI/检查单由 Completeness 按草稿计算；发布写入不可变基线并导出 evaluation-spec。
 
-**配置**：无通用运行时配置 / `QSettings` 业务解析。CMake 固定 AUTOMOC/UIC/RCC、`Qt::Widgets`、include=`./` 与 `./ui`、MinGW UTF-8。`main` 设置 `OrganizationName=AMDO`（供 AppData 路径）。硬编码：`Theme`、窗口尺寸、各页演示字段。UI 上的「执行环境/许可证」等仅为演示。
+**配置**：无通用运行时配置 / `QSettings` 业务解析。CMake 固定 AUTOMOC/UIC/RCC、`Qt::Widgets`、include=`./` 与 `./ui`、MinGW UTF-8；第三方 `yaml-cpp`（0.8.0，FetchContent 静态链接）用于评价规格 `evaluation-spec.yaml` 序列化。`main` 设置 `OrganizationName=AMDO`（供 AppData 路径）。硬编码：`Theme`、窗口尺寸、各页演示字段。UI 上的「执行环境/许可证」等仅为演示。
 
-链接依赖仅 `Qt::Widgets`。`mainwindow.ui` 未入构建。无 `.qrc`。
+链接依赖 `Qt::Widgets` 与 `yaml-cpp`（静态）。`mainwindow.ui` 未入构建。无 `.qrc`。
 
 ## 目录
 

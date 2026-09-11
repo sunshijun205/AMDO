@@ -11,7 +11,7 @@
 | 语言 | **C++11**（全文统一，禁止混用更低/更高标准语法约定以外的特性） |
 | Qt | **以 Qt 5.15.2 为准**；禁止混用 Qt6-only API。CMake 虽可找 Qt6，升级前不得混用 |
 | 构建 | CMake ≥ 3.16；本机验证：MinGW Makefiles + g++ 8.1.0 |
-| 依赖 | 仅 `Qt::Widgets`；第三方库须登记到 CMake |
+| 依赖 | `Qt::Widgets` + `yaml-cpp`（0.8.0，FetchContent 静态链接，用于 `evaluation-spec.yaml`）；新增第三方库须登记到 CMake |
 
 ## 2. 开发红线（摘要）
 
@@ -36,6 +36,8 @@ Start-Process -FilePath ".\build-mingw64\AMDO.exe"
 ```
 
 路径因机器而异。详见 [`docs/build.md`](docs/build.md)。
+
+依赖 `yaml-cpp` 按「本地优先、联网兜底」获取（find_package → vendored → FetchContent）。**若配置/链接因 yaml-cpp 找不到或拉取失败而报错，按 [`docs/build.md`](docs/build.md) 的「依赖：yaml-cpp」自动修复顺序处理（有网重配 / vcpkg 安装 / 离线源码目录 / vendored），不要只报“缺 yaml-cpp”。**
 
 改完必须 Build；失败则分析→修复→再编，禁止只报“编译失败”。**Build 成功后须直接运行生成的 `build-mingw64\AMDO.exe`（启动前先 `Stop-Process -Name AMDO` 清理旧实例，再用 `Start-Process` 后台启动，不阻塞会话；仅在 Build 通过时运行），免去手动打开 Qt。**
 

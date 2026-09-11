@@ -12,6 +12,36 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 find_package(QT NAMES Qt6 Qt5 REQUIRED COMPONENTS Widgets)
 find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Widgets)
 
+# 第三方依赖：yaml-cpp（评价规格 evaluation-spec.yaml 序列化）。
+# 获取顺序（无 yaml-cpp 的机器也能编译，排障见 docs/build.md）：
+#   1) 本地已安装（find_package，支持 vcpkg / 系统安装 / 手动 install，可离线）
+#   2) 仓库内 vendored 源码 third_party/yaml-cpp（若存在，完全离线）
+#   3) 联网 FetchContent 从 GitHub 拉取 0.8.0（首次需可访问 GitHub）
+set(YAML_CPP_BUILD_TESTS OFF CACHE BOOL "" FORCE)
+set(YAML_CPP_BUILD_TOOLS OFF CACHE BOOL "" FORCE)
+set(YAML_CPP_BUILD_CONTRIB OFF CACHE BOOL "" FORCE)
+set(YAML_CPP_FORMAT_SOURCE OFF CACHE BOOL "" FORCE)
+set(YAML_BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
+
+find_package(yaml-cpp 0.8 QUIET)
+if(NOT TARGET yaml-cpp AND NOT TARGET yaml-cpp::yaml-cpp)
+    if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/third_party/yaml-cpp/CMakeLists.txt")
+        add_subdirectory(third_party/yaml-cpp yaml-cpp-build)
+    else()
+        include(FetchContent)
+        FetchContent_Declare(
+            yaml-cpp
+            GIT_REPOSITORY https://github.com/jbeder/yaml-cpp.git
+            GIT_TAG 0.8.0
+        )
+        FetchContent_MakeAvailable(yaml-cpp)
+    endif()
+endif()
+# 统一别名：无论来源如何，都保证 yaml-cpp::yaml-cpp 可用。
+if(NOT TARGET yaml-cpp::yaml-cpp AND TARGET yaml-cpp)
+    add_library(yaml-cpp::yaml-cpp ALIAS yaml-cpp)
+endif()
+
 set(PROJECT_SOURCES
         main.cpp
         mainwindow.cpp
@@ -73,7 +103,7 @@ else()
     endif()
 endif()
 
-target_link_libraries(AMDO PRIVATE Qt${QT_VERSION_MAJOR}::Widgets)
+target_link_libraries(AMDO PRIVATE Qt${QT_VERSION_MAJOR}::Widgets yaml-cpp::yaml-cpp)
 target_include_directories(AMDO PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}
     ${CMAKE_CURRENT_SOURCE_DIR}/ui

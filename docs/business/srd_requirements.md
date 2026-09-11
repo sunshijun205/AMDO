@@ -53,7 +53,7 @@ MainWindow（导入 / 发布）
 - 工况覆盖率 = 主剖面航段中至少有一条阶段匹配 FC 的比例。
 - 需求覆盖率 = 有指标 id、关系、限值和验证方法的 REQ / 全部 REQ。
 - 发布适用性基线：规范章 `standardsFrozen=true`（不要求条款已全部映射）。
-- 发布需求基线：阻塞项必须清空；成功后写 `srd_vN.json` 并尝试导出 `*-evaluation-spec.json`。
+- 发布需求基线：阻塞项必须清空；成功后写 `srd_vN.json` 并尝试导出 `*-evaluation-spec.yaml`（评价规则主数据，YAML，符合平台数据格式总表；由 yaml-cpp 序列化）。
 - 只读打开基线后，「另存为新草稿」复制为可编辑草稿，不改旧基线。
 
 CSV 表头：`metricId,relation,value,unit,grade,name`。`metricId` 必须属于指标目录。

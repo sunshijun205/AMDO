@@ -9,6 +9,18 @@
 #include <QJsonObject>
 #include <QTextStream>
 
+#include <yaml-cpp/yaml.h>
+
+#include <string>
+
+namespace {
+std::string toU8(const QString &s)
+{
+    const QByteArray bytes = s.toUtf8();
+    return std::string(bytes.constData(), static_cast<size_t>(bytes.size()));
+}
+}
+
 SrdImportExportService::SrdImportExportService(SrdStore *store)
     : m_store(store)
 {
@@ -127,70 +139,79 @@ QString SrdImportExportService::defaultExportPath(const SrdDocument &doc) const
     QString name = doc.id.isEmpty() ? QStringLiteral("srd-draft") : doc.id;
     name.replace(QLatin1Char('/'), QLatin1Char('_'));
     if (!m_store)
-        return name + QLatin1String("-evaluation-spec.json");
-    return m_store->rootDir() + QLatin1Char('/') + name + QLatin1String("-evaluation-spec.json");
+        return name + QLatin1String("-evaluation-spec.yaml");
+    return m_store->rootDir() + QLatin1Char('/') + name + QLatin1String("-evaluation-spec.yaml");
 }
 
 bool SrdImportExportService::exportEvaluationSpec(const QString &path, const SrdDocument &doc,
                                                   QString *errorMessage)
 {
-    QJsonObject root;
-    root.insert(QStringLiteral("schema"), QStringLiteral("amdo.evaluation-spec.v1"));
-    root.insert(QStringLiteral("baselineId"), doc.id);
-    root.insert(QStringLiteral("title"), doc.title);
-    root.insert(QStringLiteral("publishedAt"), doc.publishedAt);
-    root.insert(QStringLiteral("status"), doc.status);
+    YAML::Node root;
+    root["schema"] = std::string("amdo.evaluation-spec.v1");
+    root["baselineId"] = toU8(doc.id);
+    root["title"] = toU8(doc.title);
+    root["publishedAt"] = toU8(doc.publishedAt);
+    root["status"] = toU8(doc.status);
 
-    QJsonArray missions;
+    YAML::Node missions(YAML::NodeType::Sequence);
     for (int i = 0; i < doc.missions.size(); ++i) {
-        QJsonObject m;
-        m.insert(QStringLiteral("id"), doc.missions[i].id);
-        m.insert(QStringLiteral("name"), doc.missions[i].name);
-        m.insert(QStringLiteral("boundary"), doc.missions[i].boundary);
-        m.insert(QStringLiteral("environment"), doc.missions[i].environment);
-        m.insert(QStringLiteral("status"), doc.missions[i].status);
-        missions.append(m);
+        YAML::Node m;
+        m["id"] = toU8(doc.missions[i].id);
+        m["name"] = toU8(doc.missions[i].name);
+        m["boundary"] = toU8(doc.missions[i].boundary);
+        m["environment"] = toU8(doc.missions[i].environment);
+        m["status"] = toU8(doc.missions[i].status);
+        missions.push_back(m);
     }
-    root.insert(QStringLiteral("missions"), missions);
+    root["missions"] = missions;
 
-    QJsonArray conditions;
+    YAML::Node conditions(YAML::NodeType::Sequence);
     for (int i = 0; i < doc.conditions.size(); ++i) {
-        QJsonObject c;
-        c.insert(QStringLiteral("id"), doc.conditions[i].id);
-        c.insert(QStringLiteral("phase"), doc.conditions[i].phase);
-        c.insert(QStringLiteral("altitude"), doc.conditions[i].altitude);
-        c.insert(QStringLiteral("speed"), doc.conditions[i].speed);
-        c.insert(QStringLiteral("configuration"), doc.conditions[i].configuration);
-        c.insert(QStringLiteral("atmosphere"), doc.conditions[i].atmosphere);
-        conditions.append(c);
+        YAML::Node c;
+        c["id"] = toU8(doc.conditions[i].id);
+        c["phase"] = toU8(doc.conditions[i].phase);
+        c["altitude"] = toU8(doc.conditions[i].altitude);
+        c["speed"] = toU8(doc.conditions[i].speed);
+        c["configuration"] = toU8(doc.conditions[i].configuration);
+        c["atmosphere"] = toU8(doc.conditions[i].atmosphere);
+        conditions.push_back(c);
     }
-    root.insert(QStringLiteral("flightConditions"), conditions);
+    root["flightConditions"] = conditions;
 
-    QJsonArray metrics;
-    QJsonArray constraints;
+    YAML::Node metrics(YAML::NodeType::Sequence);
+    YAML::Node constraints(YAML::NodeType::Sequence);
     for (int i = 0; i < doc.requirements.size(); ++i) {
         const SrdRequirement &r = doc.requirements[i];
-        QJsonObject m;
-        m.insert(QStringLiteral("id"), r.metricId);
-        m.insert(QStringLiteral("name"), r.metricName);
-        m.insert(QStringLiteral("unit"), r.unit);
-        m.insert(QStringLiteral("domain"), r.domain);
-        m.insert(QStringLiteral("responseId"), r.analysisResponseId);
-        metrics.append(m);
+        YAML::Node m;
+        m["id"] = toU8(r.metricId);
+        m["name"] = toU8(r.metricName);
+        m["unit"] = toU8(r.unit);
+        m["domain"] = toU8(r.domain);
+        m["responseId"] = toU8(r.analysisResponseId);
+        metrics.push_back(m);
 
-        QJsonObject c;
-        c.insert(QStringLiteral("reqId"), r.id);
-        c.insert(QStringLiteral("metricId"), r.metricId);
-        c.insert(QStringLiteral("op"), r.relation);
+        YAML::Node c;
+        c["reqId"] = toU8(r.id);
+        c["metricId"] = toU8(r.metricId);
+        c["op"] = toU8(r.relation);
         if (r.boundKnown)
-            c.insert(QStringLiteral("value"), r.boundValue);
-        c.insert(QStringLiteral("unit"), r.unit);
-        c.insert(QStringLiteral("kind"), r.constraintKind);
-        c.insert(QStringLiteral("source"), r.source);
-        constraints.append(c);
+            c["value"] = r.boundValue;
+        c["unit"] = toU8(r.unit);
+        c["kind"] = toU8(r.constraintKind);
+        c["source"] = toU8(r.source);
+        constraints.push_back(c);
     }
-    root.insert(QStringLiteral("metrics"), metrics);
-    root.insert(QStringLiteral("constraints"), constraints);
+    root["metrics"] = metrics;
+    root["constraints"] = constraints;
+
+    YAML::Emitter emitter;
+    emitter << root;
+    if (!emitter.good()) {
+        if (errorMessage)
+            *errorMessage = QString::fromUtf8("导出评价规格失败：YAML 序列化错误（%1）")
+                                .arg(QString::fromStdString(emitter.GetLastError()));
+        return false;
+    }
 
     QFile file(path);
     if (!file.open(QIODevice::WriteOnly | QIODevice::Truncate)) {
@@ -198,8 +219,8 @@ bool SrdImportExportService::exportEvaluationSpec(const QString &path, const Srd
             *errorMessage = QString::fromUtf8("导出评价规格失败：%1").arg(file.errorString());
         return false;
     }
-    const QJsonDocument json(root);
-    const QByteArray bytes = json.toJson(QJsonDocument::Indented);
+    QByteArray bytes(emitter.c_str(), static_cast<int>(emitter.size()));
+    bytes.append('\n');
     if (file.write(bytes) != bytes.size()) {
         if (errorMessage)
             *errorMessage = QString::fromUtf8("导出评价规格写入不完整");
