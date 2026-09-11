@@ -37,6 +37,7 @@ public:
 
 private:
     bool ensureEditable(QString *errorMessage) const;
+    bool ensureDefaultBaseline(QString *errorMessage);
     bool persist(QString *errorMessage);
     QString nextSystemId() const;
     QString nextParameterId() const;

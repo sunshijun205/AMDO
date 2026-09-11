@@ -897,7 +897,8 @@ void DefinitionPage::setDocument(const AircraftDocument &doc, bool readOnly)
     QVector<QStringList> relRows;
     for (int i = 0; i < doc.parameters.size(); ++i) {
         const AcParameter &p = doc.parameters[i];
-        if (p.driveType.contains(QString::fromUtf8("公式")) || p.driveType.contains(QString::fromUtf8("自动"))) {
+        if (p.driveType.contains(QString::fromUtf8("驱动")) || p.driveType.contains(QString::fromUtf8("计算"))
+            || p.driveType.contains(QString::fromUtf8("系数")) || p.driveType.contains(QString::fromUtf8("公式"))) {
             const QString input = p.note.isEmpty() ? p.symbol : p.note;
             relRows.append({p.name, input, p.symbol, p.driveType, QString::fromUtf8("有效")});
         }

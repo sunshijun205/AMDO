@@ -94,7 +94,7 @@ static AcSemantics defaultSemantics()
     s.schema = QStringLiteral("AircraftDM 2.3");
     s.namespaceStr = QStringLiteral("hx01/core");
     s.referenceStrategy = QString::fromUtf8("永久 ID");
-    s.exchangeFormat = QString::fromUtf8("CPACS 子集 (JSON)");
+    s.exchangeFormat = QStringLiteral("JSON-LD");
     s.lengthUnit = QStringLiteral("m");
     s.massUnit = QStringLiteral("kg");
     s.coordinateSystem = QString::fromUtf8("机体系 X前 Y右 Z下");
@@ -184,17 +184,15 @@ AircraftDocument AircraftCatalogs::seedDocument()
         makeParam(QStringLiteral("PARAM-001"), QString::fromUtf8("机身总长"), QStringLiteral("L_fus"),
                   38.20, QStringLiteral("m"), QString::fromUtf8("基准变量")),
         makeParam(QStringLiteral("PARAM-002"), QString::fromUtf8("机翼面积"), QStringLiteral("S_ref"),
-                  124.0, QString::fromUtf8("m^2"), QString::fromUtf8("设计变量")),
-        makeParam(QStringLiteral("PARAM-003"), QString::fromUtf8("展弦比"), QStringLiteral("AR"),
-                  9.4, QString(), QString::fromUtf8("设计变量")),
-        makeParam(QStringLiteral("PARAM-004"), QString::fromUtf8("机翼展长"), QStringLiteral("b"),
-                  34.15, QStringLiteral("m"), QString::fromUtf8("公式驱动"), QStringLiteral("b = sqrt(S_ref * AR)")),
-        makeParam(QStringLiteral("PARAM-005"), QString::fromUtf8("平均气动弦"), QStringLiteral("MAC"),
+                  124.0, QString::fromUtf8("m²"), QString::fromUtf8("设计变量")),
+        makeParam(QStringLiteral("PARAM-003"), QString::fromUtf8("机翼展长"), QStringLiteral("b"),
+                  34.15, QStringLiteral("m"), QString::fromUtf8("由 S, AR 驱动")),
+        makeParam(QStringLiteral("PARAM-004"), QString::fromUtf8("平均气动弦"), QStringLiteral("MAC"),
                   4.16, QStringLiteral("m"), QString::fromUtf8("自动计算")),
-        makeParam(QStringLiteral("PARAM-006"), QString::fromUtf8("机翼后掠角"), QStringLiteral("Sweep25"),
+        makeParam(QStringLiteral("PARAM-005"), QString::fromUtf8("机翼后掠角"), QString::fromUtf8("Λ25"),
                   25.0, QStringLiteral("deg"), QString::fromUtf8("设计变量")),
-        makeParam(QStringLiteral("PARAM-007"), QString::fromUtf8("水平尾翼面积"), QStringLiteral("S_ht"),
-                  31.4, QString::fromUtf8("m^2"), QString::fromUtf8("公式驱动"), QStringLiteral("尾容量系数驱动"))
+        makeParam(QStringLiteral("PARAM-006"), QString::fromUtf8("水平尾翼面积"), QStringLiteral("S_ht"),
+                  31.4, QString::fromUtf8("m²"), QString::fromUtf8("尾容量系数驱动"))
     };
 
     d.loadedKnown = true;

@@ -100,8 +100,37 @@ bool AircraftDocumentService::loadDraft(QString *errorMessage)
         }
     }
 
+    // baselines 为空时，用原型样板数据默认生成一份方案版本，供“选择已有基线”。
+    if (!ensureDefaultBaseline(errorMessage))
+        return false;
+
     m_current = doc;
     m_readOnly = false;
+    return true;
+}
+
+bool AircraftDocumentService::ensureDefaultBaseline(QString *errorMessage)
+{
+    QVector<AircraftBaselineInfo> list;
+    QString detail;
+    if (!m_store->listBaselines(&list, &detail)) {
+        if (errorMessage)
+            *errorMessage = QString::fromUtf8("列出方案版本失败：%1").arg(detail);
+        return false;
+    }
+    if (!list.isEmpty())
+        return true;
+
+    AircraftDocument base = AircraftCatalogs::seedDocument();
+    base.version = 1;
+    base.id = QStringLiteral("aircraft_v1");
+    base.status = QStringLiteral("published");
+    base.publishedAt = QDateTime::currentDateTime().toString(Qt::ISODate);
+    if (!m_store->saveBaseline(base, &detail)) {
+        if (errorMessage)
+            *errorMessage = QString::fromUtf8("生成默认方案版本失败：%1").arg(detail);
+        return false;
+    }
     return true;
 }
 
