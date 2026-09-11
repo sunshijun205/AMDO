@@ -56,6 +56,11 @@ set(PROJECT_SOURCES
         model/srdcatalogs.cpp
         model/srdstore.h
         model/srdstore.cpp
+        model/aircrafttypes.h
+        model/aircraftcatalogs.h
+        model/aircraftcatalogs.cpp
+        model/aircraftstore.h
+        model/aircraftstore.cpp
         service/srddocumentservice.h
         service/srddocumentservice.cpp
         service/srdcompletenessservice.h
@@ -64,8 +69,14 @@ set(PROJECT_SOURCES
         service/srdderivationservice.cpp
         service/srdimportexportservice.h
         service/srdimportexportservice.cpp
+        service/aircraftdocumentservice.h
+        service/aircraftdocumentservice.cpp
+        service/aircraftimportexportservice.h
+        service/aircraftimportexportservice.cpp
         controller/requirementspresenter.h
         controller/requirementspresenter.cpp
+        controller/definitionpresenter.h
+        controller/definitionpresenter.cpp
         ui/requirementspage.h
         ui/requirementspage.cpp
         ui/definitionpage.h
