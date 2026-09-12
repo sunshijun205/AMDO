@@ -43,6 +43,8 @@ DefinitionPresenter::DefinitionPresenter(DefinitionPage *view,
             this, &DefinitionPresenter::onRemoveParameterRequested);
     connect(m_view, &DefinitionPage::publishRequested,
             this, &DefinitionPresenter::onPublishRequested);
+    connect(m_view, &DefinitionPage::caseSnapshotRequested,
+            this, &DefinitionPresenter::onCaseSnapshotRequested);
     connect(m_view, &DefinitionPage::importPathRequested,
             this, &DefinitionPresenter::onImportPathRequested);
     connect(m_view, &DefinitionPage::exportRequested,
@@ -306,14 +308,33 @@ void DefinitionPresenter::onPublishRequested()
         fail(error);
         return;
     }
-    if (!m_document->publishBaseline(&error)) {
+    AircraftDocument published;
+    if (!m_document->publishBaseline(&error, &published)) {
         fail(error);
         return;
     }
     refreshView();
     m_view->setBusy(false);
-    m_view->setStatus(QString::fromUtf8("已创建方案版本：%1").arg(m_document->current().id.isEmpty()
-                                                                  ? QString() : m_document->current().id));
+    m_view->setStatus(QString::fromUtf8("已创建方案版本 %1，CPACS 主数据：%2")
+                          .arg(published.id, m_document->cpacsPathForVersion(published.version)));
+}
+
+void DefinitionPresenter::onCaseSnapshotRequested()
+{
+    m_view->setBusy(true);
+    QString error;
+    // 可编辑草稿：先落盘最新编辑，确保快照反映当前界面内容。
+    if (!m_document->viewingReadOnly() && !persistAll(&error)) {
+        fail(error);
+        return;
+    }
+    QString outPath;
+    if (!m_document->createCaseSnapshot(&outPath, &error)) {
+        fail(error);
+        return;
+    }
+    m_view->setBusy(false);
+    m_view->setStatus(QString::fromUtf8("已冻结不可变分析用例快照：%1").arg(outPath));
 }
 
 void DefinitionPresenter::onImportPathRequested(const QString &path)

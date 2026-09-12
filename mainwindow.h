@@ -8,6 +8,7 @@
 
 class RequirementsPage;
 class DefinitionPage;
+class AnalysisPage;
 
 class MainWindow : public QMainWindow
 {
@@ -26,6 +27,7 @@ private:
     QStackedWidget *m_pages = nullptr;
     RequirementsPage *m_requirementsPage = nullptr;
     DefinitionPage *m_definitionPage = nullptr;
+    AnalysisPage *m_analysisPage = nullptr;
     QPushButton *m_primary = nullptr;
     QPushButton *m_secondary = nullptr;
     QVector<QPushButton *> m_modeButtons;

@@ -1,15 +1,31 @@
 #include "service/aircraftdocumentservice.h"
 
 #include "model/aircraftcatalogs.h"
+#include "service/aircraftcpacsservice.h"
 
 #include <QDateTime>
+#include <QFile>
 #include <QRegExp>
 
 static const char kDraftId[] = "aircraft-draft";
 
-AircraftDocumentService::AircraftDocumentService(AircraftStore *store)
+AircraftDocumentService::AircraftDocumentService(AircraftStore *store, AircraftCpacsService *cpacs)
     : m_store(store)
+    , m_cpacs(cpacs)
 {
+}
+
+bool AircraftDocumentService::writeCpacsRevision(const AircraftDocument &doc, QString *errorMessage)
+{
+    if (!m_cpacs)
+        return true;
+    QString detail;
+    if (!m_cpacs->exportRevision(doc, nullptr, &detail)) {
+        if (errorMessage)
+            *errorMessage = QString::fromUtf8("生成 CPACS 主数据失败：%1").arg(detail);
+        return false;
+    }
+    return true;
 }
 
 bool AircraftDocumentService::ensureEditable(QString *errorMessage) const
@@ -104,8 +120,41 @@ bool AircraftDocumentService::loadDraft(QString *errorMessage)
     if (!ensureDefaultBaseline(errorMessage))
         return false;
 
+    // 每个方案版本都应有一份 CPACS 语义主数据；回填早于本功能的历史基线。
+    if (!ensureCpacsRevisions(errorMessage))
+        return false;
+
     m_current = doc;
     m_readOnly = false;
+    return true;
+}
+
+bool AircraftDocumentService::ensureCpacsRevisions(QString *errorMessage)
+{
+    if (!m_cpacs)
+        return true;
+
+    QVector<AircraftBaselineInfo> list;
+    QString detail;
+    if (!m_store->listBaselines(&list, &detail)) {
+        if (errorMessage)
+            *errorMessage = QString::fromUtf8("列出方案版本失败：%1").arg(detail);
+        return false;
+    }
+    for (int i = 0; i < list.size(); ++i) {
+        if (list[i].version <= 0)
+            continue;
+        if (QFile::exists(m_store->cpacsPathForVersion(list[i].version)))
+            continue;
+        AircraftDocument doc;
+        if (!m_store->loadBaseline(list[i].id, &doc, &detail)) {
+            if (errorMessage)
+                *errorMessage = QString::fromUtf8("回填 CPACS 读取基线失败：%1").arg(detail);
+            return false;
+        }
+        if (!writeCpacsRevision(doc, errorMessage))
+            return false;
+    }
     return true;
 }
 
@@ -131,6 +180,8 @@ bool AircraftDocumentService::ensureDefaultBaseline(QString *errorMessage)
             *errorMessage = QString::fromUtf8("生成默认方案版本失败：%1").arg(detail);
         return false;
     }
+    if (!writeCpacsRevision(base, errorMessage))
+        return false;
     return true;
 }
 
@@ -213,7 +264,7 @@ bool AircraftDocumentService::copyBaselineToDraft(const QString &id, QString *er
     return persist(errorMessage);
 }
 
-bool AircraftDocumentService::publishBaseline(QString *errorMessage)
+bool AircraftDocumentService::publishBaseline(QString *errorMessage, AircraftDocument *publishedOut)
 {
     if (!ensureEditable(errorMessage))
         return false;
@@ -234,7 +285,36 @@ bool AircraftDocumentService::publishBaseline(QString *errorMessage)
             *errorMessage = QString::fromUtf8("发布方案版本失败：%1").arg(detail);
         return false;
     }
-    return persist(errorMessage);
+    if (!writeCpacsRevision(published, errorMessage))
+        return false;
+    if (!persist(errorMessage))
+        return false;
+    if (publishedOut)
+        *publishedOut = published;
+    return true;
+}
+
+bool AircraftDocumentService::createCaseSnapshot(QString *outPath, QString *errorMessage)
+{
+    if (!m_store) {
+        if (errorMessage)
+            *errorMessage = QString::fromUtf8("存储未初始化");
+        return false;
+    }
+    if (!m_cpacs) {
+        if (errorMessage)
+            *errorMessage = QString::fromUtf8("CPACS 服务未初始化，无法冻结分析用例");
+        return false;
+    }
+
+    const int caseNumber = m_store->nextCaseNumber();
+    QString detail;
+    if (!m_cpacs->exportCaseSnapshot(m_current, caseNumber, outPath, &detail)) {
+        if (errorMessage)
+            *errorMessage = QString::fromUtf8("冻结分析用例失败：%1").arg(detail);
+        return false;
+    }
+    return true;
 }
 
 bool AircraftDocumentService::setSemantics(const AcSemantics &semantics, const QString &title,
@@ -325,6 +405,11 @@ bool AircraftDocumentService::removeParameter(const QString &id, QString *errorM
 QString AircraftDocumentService::draftPath() const
 {
     return m_store ? m_store->draftPath() : QString();
+}
+
+QString AircraftDocumentService::cpacsPathForVersion(int version) const
+{
+    return m_store ? m_store->cpacsPathForVersion(version) : QString();
 }
 
 bool AircraftDocumentService::listBaselines(QVector<AircraftBaselineInfo> *out, QString *errorMessage) const

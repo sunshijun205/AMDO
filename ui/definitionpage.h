@@ -16,6 +16,7 @@ class QTreeWidget;
 class AircraftStore;
 class AircraftDocumentService;
 class AircraftImportExportService;
+class AircraftCpacsService;
 class DefinitionPresenter;
 
 class DefinitionPage : public QWidget
@@ -54,6 +55,7 @@ signals:
     void addParameterRequested();
     void removeParameterRequested();
     void publishRequested();
+    void caseSnapshotRequested();
     void importPathRequested(const QString &path);
     void exportRequested();
     void integrityCheckRequested();
@@ -83,6 +85,7 @@ private:
     bool m_updating = false;
 
     std::unique_ptr<AircraftStore> m_store;
+    std::unique_ptr<AircraftCpacsService> m_cpacs;
     std::unique_ptr<AircraftDocumentService> m_document;
     std::unique_ptr<AircraftImportExportService> m_io;
     DefinitionPresenter *m_presenter = nullptr;
@@ -130,6 +133,7 @@ private:
 
     QPushButton *m_saveBtn = nullptr;
     QPushButton *m_publishBtn = nullptr;
+    QPushButton *m_snapshotBtn = nullptr;
     QPushButton *m_importBtn = nullptr;
     QPushButton *m_exportBtn = nullptr;
     QPushButton *m_saveSemBtn = nullptr;

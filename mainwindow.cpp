@@ -87,9 +87,10 @@ MainWindow::MainWindow(QWidget *parent)
     m_pages = new QStackedWidget;
     m_requirementsPage = new RequirementsPage;
     m_definitionPage = new DefinitionPage;
+    m_analysisPage = new AnalysisPage;
     m_pages->addWidget(m_requirementsPage);
     m_pages->addWidget(m_definitionPage);
-    m_pages->addWidget(new AnalysisPage);
+    m_pages->addWidget(m_analysisPage);
     m_pages->addWidget(new DesignPage);
     m_pages->addWidget(new DecisionPage);
     m_pages->addWidget(new WorkflowPage);
@@ -135,6 +136,10 @@ void MainWindow::onPrimaryClicked()
         m_definitionPage->requestSaveAll();
         return;
     }
+    if (m_pages->currentIndex() == 2 && m_analysisPage) {
+        m_analysisPage->requestSaveAll();
+        return;
+    }
     QMessageBox::information(this, QString::fromUtf8("飞机概念设计平台"),
                              m_primary->text() + QString::fromUtf8(" — 原型交互已记录。"));
 }
@@ -147,6 +152,10 @@ void MainWindow::onSecondaryClicked()
     }
     if (m_pages->currentIndex() == 1 && m_definitionPage) {
         m_definitionPage->requestIntegrityCheck();
+        return;
+    }
+    if (m_pages->currentIndex() == 2 && m_analysisPage) {
+        m_analysisPage->requestValidate();
         return;
     }
     QMessageBox::information(this, QString::fromUtf8("飞机概念设计平台"),

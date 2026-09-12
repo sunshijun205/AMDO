@@ -7,6 +7,7 @@
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
+#include <QRegExp>
 #include <QStandardPaths>
 
 static const char kSchema[] = "amdo.aircraft.v1";
@@ -194,6 +195,46 @@ QString AircraftStore::baselinesDir() const
     const QString dir = rootDir() + QLatin1String("/baselines");
     QDir().mkpath(dir);
     return dir;
+}
+
+QString AircraftStore::cpacsDir() const
+{
+    const QString dir = rootDir() + QLatin1String("/cpacs");
+    QDir().mkpath(dir);
+    return dir;
+}
+
+QString AircraftStore::cpacsPathForVersion(int version) const
+{
+    const QString revision = QStringLiteral("aircraft_R%1").arg(version, 3, 10, QLatin1Char('0'));
+    return cpacsDir() + QLatin1Char('/') + revision + QLatin1String(".cpacs.xml");
+}
+
+QString AircraftStore::casesDir() const
+{
+    const QString dir = rootDir() + QLatin1String("/cases");
+    QDir().mkpath(dir);
+    return dir;
+}
+
+QString AircraftStore::caseInputPath(int caseNumber) const
+{
+    return casesDir() + QLatin1String("/case_") + QString::number(caseNumber)
+           + QLatin1String(".input.cpacs.xml");
+}
+
+int AircraftStore::nextCaseNumber() const
+{
+    QDir dir(casesDir());
+    const QStringList files = dir.entryList(
+        QStringList() << QStringLiteral("case_*.input.cpacs.xml"), QDir::Files);
+    int maxNum = 0;
+    QRegExp re(QStringLiteral("^case_(\\d+)\\.input\\.cpacs\\.xml$"));
+    for (int i = 0; i < files.size(); ++i) {
+        if (re.exactMatch(files[i]))
+            maxNum = qMax(maxNum, re.cap(1).toInt());
+    }
+    return maxNum + 1;
 }
 
 bool AircraftStore::readDocumentFile(const QString &path, AircraftDocument *out, QString *errorMessage) const

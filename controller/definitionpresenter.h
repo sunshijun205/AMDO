@@ -32,6 +32,7 @@ public slots:
     void onAddParameterRequested();
     void onRemoveParameterRequested();
     void onPublishRequested();
+    void onCaseSnapshotRequested();
     void onImportPathRequested(const QString &path);
     void onExportRequested();
     void onIntegrityCheckRequested();

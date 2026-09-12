@@ -4,6 +4,7 @@
 #include "controller/definitionpresenter.h"
 #include "model/aircraftcatalogs.h"
 #include "model/aircraftstore.h"
+#include "service/aircraftcpacsservice.h"
 #include "service/aircraftdocumentservice.h"
 #include "service/aircraftimportexportservice.h"
 #include "uihelpers.h"
@@ -148,7 +149,8 @@ DefinitionPage::DefinitionPage(QWidget *parent)
     buildUi();
 
     m_store.reset(new AircraftStore);
-    m_document.reset(new AircraftDocumentService(m_store.get()));
+    m_cpacs.reset(new AircraftCpacsService(m_store.get()));
+    m_document.reset(new AircraftDocumentService(m_store.get(), m_cpacs.get()));
     m_io.reset(new AircraftImportExportService(m_store.get()));
     m_presenter = new DefinitionPresenter(this, m_document.get(), m_io.get(), this);
 }
@@ -247,13 +249,16 @@ void DefinitionPage::buildUi()
     tbl->addStretch();
     m_saveBtn = makeButton(QString::fromUtf8("保存方案定义"), true);
     m_publishBtn = makeButton(QString::fromUtf8("创建方案版本"));
+    m_snapshotBtn = makeButton(QString::fromUtf8("冻结分析用例"));
     tbl->addWidget(m_saveBtn);
     tbl->addWidget(m_publishBtn);
+    tbl->addWidget(m_snapshotBtn);
     lay->addWidget(toolbar);
     connect(m_importBtn, &QPushButton::clicked, this, &DefinitionPage::requestImport);
     connect(m_exportBtn, &QPushButton::clicked, this, &DefinitionPage::exportRequested);
     connect(m_saveBtn, &QPushButton::clicked, this, &DefinitionPage::saveAllRequested);
     connect(m_publishBtn, &QPushButton::clicked, this, &DefinitionPage::publishRequested);
+    connect(m_snapshotBtn, &QPushButton::clicked, this, &DefinitionPage::caseSnapshotRequested);
 
     auto *tabs = new SubTabBar({
         {QStringLiteral("semantic"), QString::fromUtf8("飞机语义数据模型")},
@@ -675,7 +680,7 @@ void DefinitionPage::setReadOnly(bool readOnly)
             || qobject_cast<QTableWidget *>(w) || qobject_cast<QPushButton *>(w);
         if (!isEditor)
             continue;
-        if (w == m_copyDraftBtn || w == m_exportBtn)
+        if (w == m_copyDraftBtn || w == m_exportBtn || w == m_snapshotBtn)
             continue;
         w->setEnabled(!readOnly);
     }
@@ -691,7 +696,8 @@ void DefinitionPage::setBusy(bool busy)
     for (int i = 0; i < buttons.size(); ++i) {
         if (buttons[i]->objectName() == QLatin1String("SubTabButton"))
             continue;
-        const bool allowInReadOnly = (buttons[i] == m_copyDraftBtn || buttons[i] == m_exportBtn);
+        const bool allowInReadOnly = (buttons[i] == m_copyDraftBtn || buttons[i] == m_exportBtn
+                                      || buttons[i] == m_snapshotBtn);
         buttons[i]->setEnabled(!busy && (!m_readOnly || allowInReadOnly));
     }
     if (m_baselineBox)

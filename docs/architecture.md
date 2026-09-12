@@ -74,7 +74,13 @@ AMDO/
 | SRD Service | `service/srd*.*` | `SrdDocumentService` 等 | 草稿/派生/检查/导入导出 |
 | SRD 数据 | `model/srd*` | `SrdDocument` / `SrdStore` / `SrdCatalogs` | POD + JSON + 种子目录 |
 | 方案定义 | `ui/definitionpage.*` | `DefinitionPage` | 语义/构型/几何/视图 |
-| 学科分析 | `ui/analysispage.*` | `AnalysisPage` | 六学科侧栏+表单 |
+| 方案定义 Presenter | `controller/definitionpresenter.*` | `DefinitionPresenter` | 编排方案用例与刷新 |
+| 方案定义 Service | `service/aircraft*.*` | `AircraftDocumentService` / `AircraftImportExportService` / `AircraftCpacsService` | 草稿/基线/导入导出/CPACS 主数据 |
+| 方案定义 数据 | `model/aircraft*` | `AircraftDocument` / `AircraftStore` / `AircraftCatalogs` | POD + JSON + 种子目录 |
+| 学科分析 | `ui/analysispage.*` | `AnalysisPage` | 六学科侧栏+表单；分层持久化分析集 |
+| 学科分析 Presenter | `controller/analysispresenter.*` | `AnalysisPresenter` | 编排加载/保存/校验 |
+| 学科分析 Service | `service/analysisdocumentservice.*` | `AnalysisDocumentService` | 分析集草稿读写 + 配置校验 |
+| 学科分析 数据 | `model/analysis*` | `AnalysisDocument` / `AnalysisStore` / `AnalysisCatalogs` | POD + JSON + 六学科目录 |
 | 方案优化 | `ui/designpage.*` | `DesignPage` | 变量/探索/优化/MDO |
 | 方案决策 | `ui/decisionpage.*` | `DecisionPage` | 评价/比较/报告 |
 | 工作流 | `ui/workflowpage.*` | `WorkflowPage` | 编排/执行/监控 |
@@ -97,3 +103,6 @@ AMDO/
 - 闲置 `.ui` 易误导
 - 仅设计需求 SRD 一条链路完成分层，其余仍为原型
 - 设计需求已按 SRD 闭环落地；分析/优化/决策尚未消费 evaluation-spec
+- 方案定义已分层（View→Presenter→Service→Model）；「创建方案版本」除写 `baselines/aircraft_vN.json` 外，同步产出 CPACS 飞机语义主数据 `cpacs/aircraft_Rxxx.cpacs.xml`（简化子集，QXmlStreamWriter）；「冻结分析用例」将当前方案冻结为不可变 `cases/case_N.input.cpacs.xml`（含 `amdo:case` 登记块，对应 CaseSnapshotBuilder）
+- 方案定义尚未派生 STEP/B-Rep/GLB（需 OCCT/TiGL 几何内核，暂不引入）；下游分析/优化/决策三流亦未消费 CPACS/用例快照
+- 学科分析已分层（View→Presenter→Service→Model）：六学科配置为「分析集」，「保存分析集」写 `analysis/analysis_draft.json`、「校验配置」做空值/数值/关联检查；结构在 `AnalysisCatalogs` 目录、文档只存字段取值与对飞机修订/用例的引用；「发布分析集版本」冻结为不可变 `analysis/baselines/analysis_vN.json`，版本选择条支持切草稿/只读基线与「另存为新草稿」；求解器仍未实现
