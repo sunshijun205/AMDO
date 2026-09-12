@@ -12,7 +12,7 @@
 |----|------|
 | 入口 | 「学科分析」页顶栏「运行学科计算」按钮 |
 | 输入 | 飞机参数：`sourceRevision`(R00N)→ `aircraft_vN.json`；**工况：优先取关联 SRD `sourceSrd`(srd_vN) 的飞行包线点（`sourceCondition` 选定），未关联时回退分析集手填高度/马赫** |
-| 输出 | `%AppData%/AMDO/飞机概念设计平台/analysis/results/analysis_result.json` + 结果对话框 |
+| 输出 | `analysis/results/` 下按运行关联命名：有用例→`case_N.evaluation.json`（贴 PDF）；无用例→`analysis_<修订_需求_cond工况>.json`。同一关联重复运行覆盖同名，不同关联互不覆盖。另有结果对话框。 |
 | 保真度 | `精确`(ISA/AR) / `低保真估算`(L/D，含假设系数) / `MOCK`(占位) |
 | 非目标 | 真正的求解器、几何网格(OCCT/TiGL)、CFD/FEM、优化闭环 |
 
@@ -65,7 +65,7 @@ AnalysisPresenter → view.showRunResult()（对话框） + saveResult()（JSON�
 - L/D 估算写死了假设系数 `Cd0=0.020`、`e=0.80`（见 `analysiscomputeservice.cpp` 顶部常量）；TODO：改为从气动配置/极曲线求解。
 - 设计工况优先取关联 SRD(`sourceSrd`)的飞行包线点(`sourceCondition` 选定)；未关联时回退分析集手填高度/马赫。
 - TODO：进一步支持 `SrdFlightCondition`(相/高度/速度字符串)与载荷工况选择；大气模型深度对接 `SrdEnvironment`。
-- 结果文件当前统一为 `analysis_result.json`；TODO：关联用例时对齐 PDF 的 `case_N.evaluation.json`。
+- 结果文件按关联命名：有 `sourceCase` → `case_N.evaluation.json`（贴 PDF）；否则用「修订+需求+工况」组合键。TODO：加运行清单 `index.json` 供 UI 列出/切换历史结果。
 - MOCK 占位值仅为量级示意，**禁止**据此下工程结论。
 
 ## 6. 后续路线

@@ -473,17 +473,41 @@ AnalysisRunResult AnalysisComputeService::run(const AnalysisDocument &analysis, 
     return result;
 }
 
-QString AnalysisComputeService::resultPath() const
+// 文件名安全化：非字母数字与 _.- 一律替换为 _。
+static QString sanitizeName(const QString &s)
+{
+    QString t = s;
+    t.replace(QRegExp(QStringLiteral("[^A-Za-z0-9_.-]")), QStringLiteral("_"));
+    return t;
+}
+
+QString AnalysisComputeService::resultPath(const AnalysisRunResult &result) const
 {
     if (!m_analysisStore)
         return QString();
-    return m_analysisStore->rootDir() + QLatin1String("/results/analysis_result.json");
+    const QString dir = m_analysisStore->rootDir() + QLatin1String("/results");
+
+    QString name;
+    if (!result.sourceCase.isEmpty()) {
+        // A：贴 PDF —— 单设计点/用例一份：case_N.evaluation.json
+        name = result.sourceCase + QLatin1String(".evaluation.json");
+    } else {
+        // 无用例：用「修订+需求+工况」组合键，确保不同关联互不覆盖。
+        QStringList parts;
+        parts << (result.sourceRevision.isEmpty() ? QStringLiteral("noRev") : result.sourceRevision);
+        if (!result.sourceSrd.isEmpty())
+            parts << result.sourceSrd;
+        if (!result.sourceCondition.isEmpty())
+            parts << (QStringLiteral("cond") + result.sourceCondition);
+        name = QStringLiteral("analysis_") + parts.join(QLatin1Char('_')) + QLatin1String(".json");
+    }
+    return dir + QLatin1Char('/') + sanitizeName(name);
 }
 
 bool AnalysisComputeService::saveResult(const AnalysisRunResult &result, QString *outPath,
                                         QString *errorMessage) const
 {
-    const QString path = resultPath();
+    const QString path = resultPath(result);
     if (path.isEmpty()) {
         if (errorMessage)
             *errorMessage = QString::fromUtf8("存储未初始化");

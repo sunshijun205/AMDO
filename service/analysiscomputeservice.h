@@ -127,7 +127,10 @@ public:
     AnalysisRunResult run(const AnalysisDocument &analysis, QString *errorMessage = nullptr) const;
     bool saveResult(const AnalysisRunResult &result, QString *outPath = nullptr,
                     QString *errorMessage = nullptr) const;
-    QString resultPath() const;
+    // 结果文件路径按运行的关联身份命名（贴 PDF）：
+    //   有用例 sourceCase → results/case_N.evaluation.json；
+    //   否则用「修订+需求+工况」组合键 → results/analysis_<key>.json，避免不同关联互相覆盖。
+    QString resultPath(const AnalysisRunResult &result) const;
 
 private:
     AnalysisComputeInputs resolveInputs(const AnalysisDocument &analysis) const;
