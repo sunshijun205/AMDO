@@ -4,6 +4,7 @@
 #include "model/aircrafttypes.h"
 
 #include <QString>
+#include <QStringList>
 #include <QVector>
 
 class AircraftStore
@@ -17,6 +18,7 @@ public:
     QString casesDir() const;
     QString caseInputPath(int caseNumber) const;
     int nextCaseNumber() const;
+    QStringList listCaseIds() const;
 
     bool loadDraft(AircraftDocument *out, QString *errorMessage = nullptr) const;
     bool saveDraft(const AircraftDocument &doc, QString *errorMessage = nullptr) const;

@@ -28,6 +28,8 @@ static QJsonObject documentToJson(const AnalysisDocument &d)
     o.insert(QStringLiteral("publishedAt"), d.publishedAt);
     o.insert(QStringLiteral("sourceRevision"), d.sourceRevision);
     o.insert(QStringLiteral("sourceCase"), d.sourceCase);
+    o.insert(QStringLiteral("sourceSrd"), d.sourceSrd);
+    o.insert(QStringLiteral("sourceCondition"), d.sourceCondition);
 
     QJsonObject values;
     for (auto it = d.values.constBegin(); it != d.values.constEnd(); ++it)
@@ -54,6 +56,8 @@ static bool documentFromJson(const QJsonObject &o, AnalysisDocument *out, QStrin
     out->publishedAt = o.value(QStringLiteral("publishedAt")).toString();
     out->sourceRevision = o.value(QStringLiteral("sourceRevision")).toString();
     out->sourceCase = o.value(QStringLiteral("sourceCase")).toString();
+    out->sourceSrd = o.value(QStringLiteral("sourceSrd")).toString();
+    out->sourceCondition = o.value(QStringLiteral("sourceCondition")).toString();
 
     out->values.clear();
     const QJsonObject values = o.value(QStringLiteral("values")).toObject();

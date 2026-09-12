@@ -5,13 +5,14 @@
 
 class AnalysisPage;
 class AnalysisDocumentService;
+class AnalysisComputeService;
 
 class AnalysisPresenter : public QObject
 {
     Q_OBJECT
 public:
     AnalysisPresenter(AnalysisPage *view, AnalysisDocumentService *document,
-                      QObject *parent = nullptr);
+                      AnalysisComputeService *compute, QObject *parent = nullptr);
 
 public slots:
     void onLoadRequested();
@@ -20,12 +21,16 @@ public slots:
     void onPublishRequested();
     void onSwitchBaselineRequested(const QString &id);
     void onCopyToDraftRequested();
+    void onReferencesChanged(const QString &sourceRevision, const QString &sourceCase,
+                             const QString &sourceSrd, const QString &sourceCondition);
+    void onRunRequested();
 
 private:
     void refreshView();
 
     AnalysisPage *m_view;
     AnalysisDocumentService *m_document;
+    AnalysisComputeService *m_compute;
 };
 
 #endif

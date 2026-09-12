@@ -1,8 +1,13 @@
 #include "analysispage.h"
 
 #include "controller/analysispresenter.h"
+#include "model/aircraftstore.h"
 #include "model/analysiscatalogs.h"
 #include "model/analysisstore.h"
+#include "model/srdstore.h"
+#include "model/srdtypes.h"
+#include "service/aircraftcpacsservice.h"
+#include "service/analysiscomputeservice.h"
 #include "service/analysisdocumentservice.h"
 #include "uihelpers.h"
 
@@ -10,25 +15,33 @@
 #include <QButtonGroup>
 #include <QCheckBox>
 #include <QComboBox>
+#include <QDialog>
+#include <QDialogButtonBox>
 #include <QFrame>
 #include <QGridLayout>
 #include <QHBoxLayout>
+#include <QHeaderView>
 #include <QLabel>
 #include <QLineEdit>
 #include <QMessageBox>
 #include <QScrollArea>
 #include <QStackedWidget>
 #include <QStyle>
+#include <QTreeWidget>
 #include <QVBoxLayout>
 
 AnalysisPage::AnalysisPage(QWidget *parent)
     : QWidget(parent)
 {
+    m_aircraftStore.reset(new AircraftStore);
+    m_srdStore.reset(new SrdStore);
     buildUi();
+    reloadReferenceOptions();
 
     m_store.reset(new AnalysisStore);
     m_document.reset(new AnalysisDocumentService(m_store.get()));
-    m_presenter = new AnalysisPresenter(this, m_document.get(), this);
+    m_compute.reset(new AnalysisComputeService(m_aircraftStore.get(), m_store.get(), m_srdStore.get()));
+    m_presenter = new AnalysisPresenter(this, m_document.get(), m_compute.get(), this);
 }
 
 AnalysisPage::~AnalysisPage() = default;
@@ -196,17 +209,53 @@ void AnalysisPage::buildUi()
     auto *verLabel = new QLabel(QString::fromUtf8("分析集版本"));
     verLabel->setObjectName(QStringLiteral("FieldLabel"));
     m_baselineBox = new QComboBox;
-    m_baselineBox->setMinimumWidth(260);
+    m_baselineBox->setMinimumWidth(220);
+    auto *revLabel = new QLabel(QString::fromUtf8("关联飞机修订"));
+    revLabel->setObjectName(QStringLiteral("FieldLabel"));
+    m_revisionBox = new QComboBox;
+    m_revisionBox->setMinimumWidth(180);
+    auto *srdLabel = new QLabel(QString::fromUtf8("关联设计需求"));
+    srdLabel->setObjectName(QStringLiteral("FieldLabel"));
+    m_srdBox = new QComboBox;
+    m_srdBox->setMinimumWidth(150);
+    auto *condLabel = new QLabel(QString::fromUtf8("设计工况"));
+    condLabel->setObjectName(QStringLiteral("FieldLabel"));
+    m_conditionBox = new QComboBox;
+    m_conditionBox->setMinimumWidth(170);
+    auto *caseLabel = new QLabel(QString::fromUtf8("关联用例"));
+    caseLabel->setObjectName(QStringLiteral("FieldLabel"));
+    m_caseBox = new QComboBox;
+    m_caseBox->setMinimumWidth(120);
     hb->addWidget(verLabel);
     hb->addWidget(m_baselineBox);
+    hb->addSpacing(12);
+    hb->addWidget(revLabel);
+    hb->addWidget(m_revisionBox);
+    hb->addWidget(srdLabel);
+    hb->addWidget(m_srdBox);
+    hb->addWidget(condLabel);
+    hb->addWidget(m_conditionBox);
+    hb->addWidget(caseLabel);
+    hb->addWidget(m_caseBox);
     hb->addStretch();
+    m_runBtn = makeButton(QString::fromUtf8("运行学科计算"));
     m_copyDraftBtn = makeButton(QString::fromUtf8("另存为新草稿"));
     m_publishBtn = makeButton(QString::fromUtf8("发布分析集版本"), true);
+    hb->addWidget(m_runBtn);
     hb->addWidget(m_copyDraftBtn);
     hb->addWidget(m_publishBtn);
     outer->addWidget(header);
+    connect(m_runBtn, &QPushButton::clicked, this, &AnalysisPage::runRequested);
     connect(m_baselineBox, static_cast<void (QComboBox::*)(int)>(&QComboBox::currentIndexChanged),
             this, &AnalysisPage::onBaselineChanged);
+    connect(m_revisionBox, static_cast<void (QComboBox::*)(int)>(&QComboBox::currentIndexChanged),
+            this, &AnalysisPage::onReferenceChanged);
+    connect(m_srdBox, static_cast<void (QComboBox::*)(int)>(&QComboBox::currentIndexChanged),
+            this, &AnalysisPage::onSrdChanged);
+    connect(m_conditionBox, static_cast<void (QComboBox::*)(int)>(&QComboBox::currentIndexChanged),
+            this, &AnalysisPage::onReferenceChanged);
+    connect(m_caseBox, static_cast<void (QComboBox::*)(int)>(&QComboBox::currentIndexChanged),
+            this, &AnalysisPage::onReferenceChanged);
     connect(m_copyDraftBtn, &QPushButton::clicked, this, &AnalysisPage::copyToDraftRequested);
     connect(m_publishBtn, &QPushButton::clicked, this, &AnalysisPage::publishRequested);
 
@@ -283,6 +332,31 @@ void AnalysisPage::setDocument(const AnalysisDocument &doc)
             edit->setText(value);
         }
     }
+
+    // 关联下拉：按文档的引用选中（编程更新，避免触发 referencesChanged）。
+    m_updating = true;
+    if (m_revisionBox) {
+        int idx = m_revisionBox->findData(doc.sourceRevision);
+        m_revisionBox->setCurrentIndex(idx < 0 ? 0 : idx);
+    }
+    if (m_srdBox) {
+        int idx = m_srdBox->findData(doc.sourceSrd);
+        m_srdBox->setCurrentIndex(idx < 0 ? 0 : idx);
+    }
+    if (m_caseBox) {
+        int idx = m_caseBox->findData(doc.sourceCase);
+        m_caseBox->setCurrentIndex(idx < 0 ? 0 : idx);
+    }
+    m_updating = false;
+
+    // 设计工况选项随文档的 SRD 关联重建，再按文档选中。
+    reloadConditionOptions(doc.sourceSrd);
+    m_updating = true;
+    if (m_conditionBox) {
+        int idx = m_conditionBox->findData(doc.sourceCondition);
+        m_conditionBox->setCurrentIndex(idx < 0 ? 0 : idx);
+    }
+    m_updating = false;
 }
 
 void AnalysisPage::setBaselines(const QVector<AnalysisBaselineInfo> &baselines, const QString &currentId)
@@ -320,6 +394,14 @@ void AnalysisPage::setReadOnly(bool readOnly)
         m_copyDraftBtn->setEnabled(readOnly);
     if (m_publishBtn)
         m_publishBtn->setEnabled(!readOnly);
+    if (m_revisionBox)
+        m_revisionBox->setEnabled(!readOnly);
+    if (m_srdBox)
+        m_srdBox->setEnabled(!readOnly);
+    if (m_conditionBox)
+        m_conditionBox->setEnabled(!readOnly);
+    if (m_caseBox)
+        m_caseBox->setEnabled(!readOnly);
 }
 
 void AnalysisPage::onBaselineChanged(int)
@@ -327,6 +409,103 @@ void AnalysisPage::onBaselineChanged(int)
     if (m_updating || !m_baselineBox)
         return;
     emit switchBaselineRequested(m_baselineBox->currentData().toString());
+}
+
+void AnalysisPage::reloadReferenceOptions()
+{
+    if (!m_revisionBox || !m_caseBox)
+        return;
+    m_updating = true;
+
+    m_revisionBox->clear();
+    m_revisionBox->addItem(QString::fromUtf8("（未关联）"), QString());
+    if (m_aircraftStore) {
+        QVector<AircraftBaselineInfo> baselines;
+        QString detail;
+        if (m_aircraftStore->listBaselines(&baselines, &detail)) {
+            for (int i = 0; i < baselines.size(); ++i) {
+                const QString revId = AircraftCpacsService::revisionId(baselines[i].version);
+                QString label = revId;
+                if (!baselines[i].id.isEmpty())
+                    label += QStringLiteral(" · ") + baselines[i].id;
+                if (!baselines[i].title.isEmpty())
+                    label += QStringLiteral(" · ") + baselines[i].title;
+                m_revisionBox->addItem(label, revId);
+            }
+        }
+    }
+
+    m_srdBox->clear();
+    m_srdBox->addItem(QString::fromUtf8("（未关联）"), QString());
+    if (m_srdStore) {
+        QVector<SrdBaselineInfo> srdBaselines;
+        QString srdDetail;
+        if (m_srdStore->listBaselines(&srdBaselines, &srdDetail)) {
+            for (int i = 0; i < srdBaselines.size(); ++i) {
+                QString label = srdBaselines[i].id;
+                if (!srdBaselines[i].title.isEmpty())
+                    label += QStringLiteral(" · ") + srdBaselines[i].title;
+                m_srdBox->addItem(label, srdBaselines[i].id);
+            }
+        }
+    }
+
+    m_caseBox->clear();
+    m_caseBox->addItem(QString::fromUtf8("（不关联用例）"), QString());
+    if (m_aircraftStore) {
+        const QStringList caseIds = m_aircraftStore->listCaseIds();
+        for (int i = 0; i < caseIds.size(); ++i)
+            m_caseBox->addItem(caseIds[i], caseIds[i]);
+    }
+
+    m_updating = false;
+
+    // 设计工况选项依赖当前 SRD 选择；先按当前 SRD 填一次。
+    reloadConditionOptions(m_srdBox->currentData().toString());
+}
+
+// 依据关联的 SRD 基线，填充其飞行包线点作为可选设计工况。
+void AnalysisPage::reloadConditionOptions(const QString &srdId)
+{
+    if (!m_conditionBox)
+        return;
+    m_updating = true;
+    m_conditionBox->clear();
+    m_conditionBox->addItem(QString::fromUtf8("（用分析集工况）"), QString());
+    if (!srdId.isEmpty() && m_srdStore) {
+        SrdDocument srd;
+        QString detail;
+        if (m_srdStore->loadBaseline(srdId, &srd, &detail)) {
+            for (int i = 0; i < srd.envelopePoints.size(); ++i) {
+                const SrdEnvelopePoint &ep = srd.envelopePoints[i];
+                const QString label = QString::fromUtf8("包线点%1  Ma %2 / %3 km")
+                                          .arg(i + 1)
+                                          .arg(ep.mach, 0, 'g', 3)
+                                          .arg(ep.altitudeKm, 0, 'g', 4);
+                m_conditionBox->addItem(label, QString::number(i));
+            }
+        }
+    }
+    m_updating = false;
+}
+
+void AnalysisPage::onSrdChanged(int)
+{
+    if (m_updating || !m_srdBox)
+        return;
+    // SRD 变了：重建设计工况选项（默认回到“用分析集工况”），再统一发关联变更。
+    reloadConditionOptions(m_srdBox->currentData().toString());
+    onReferenceChanged(0);
+}
+
+void AnalysisPage::onReferenceChanged(int)
+{
+    if (m_updating || !m_revisionBox || !m_caseBox || !m_srdBox || !m_conditionBox)
+        return;
+    emit referencesChanged(m_revisionBox->currentData().toString(),
+                           m_caseBox->currentData().toString(),
+                           m_srdBox->currentData().toString(),
+                           m_conditionBox->currentData().toString());
 }
 
 void AnalysisPage::snapshot(QHash<QString, QString> *values) const
@@ -377,4 +556,59 @@ void AnalysisPage::reportValidation(const QStringList &issues)
     for (int i = 0; i < issues.size(); ++i)
         text += QString::fromUtf8("• ") + issues[i] + QLatin1Char('\n');
     QMessageBox::warning(this, QString::fromUtf8("配置校验"), text);
+}
+
+void AnalysisPage::showRunResult(const AnalysisRunResult &result)
+{
+    QDialog dialog(this);
+    dialog.setWindowTitle(QString::fromUtf8("学科运行计算结果"));
+    dialog.resize(760, 560);
+    auto *lay = new QVBoxLayout(&dialog);
+
+    QString head = QString::fromUtf8("运行时间：%1").arg(result.runAt);
+    head += QString::fromUtf8("　飞机修订：%1")
+                .arg(result.sourceRevision.isEmpty() ? QString::fromUtf8("未关联")
+                                                      : result.sourceRevision);
+    if (result.sourceRevision.isEmpty() || !result.aircraftResolved)
+        head += QString::fromUtf8("（几何相关项将缺失/占位）");
+    auto *headLabel = new QLabel(head);
+    headLabel->setWordWrap(true);
+    lay->addWidget(headLabel);
+
+    auto *note = new QLabel(QString::fromUtf8(
+        "说明：保真度为 MOCK 的为占位假值，仅打通链路，后期细化各学科计算时替换。"));
+    note->setObjectName(QStringLiteral("NoteLabel"));
+    note->setWordWrap(true);
+    lay->addWidget(note);
+
+    auto *tree = new QTreeWidget;
+    tree->setColumnCount(4);
+    tree->setHeaderLabels({QString::fromUtf8("项目"), QString::fromUtf8("数值"),
+                           QString::fromUtf8("保真度"), QString::fromUtf8("说明")});
+    tree->header()->setStretchLastSection(true);
+    tree->setColumnWidth(0, 220);
+    tree->setColumnWidth(1, 140);
+    tree->setColumnWidth(2, 90);
+    for (int i = 0; i < result.disciplines.size(); ++i) {
+        const AnalysisDisciplineResult &d = result.disciplines[i];
+        auto *top = new QTreeWidgetItem(tree, {d.domainName,
+                                               QString(), d.status, QString()});
+        top->setExpanded(true);
+        for (int j = 0; j < d.items.size(); ++j) {
+            const AnalysisResultItem &it = d.items[j];
+            const QString valueText = it.valueKnown
+                ? (QString::number(it.value, 'g', 6)
+                   + (it.unit.isEmpty() ? QString() : QLatin1Char(' ') + it.unit))
+                : QString::fromUtf8("—");
+            new QTreeWidgetItem(top, {it.label, valueText, it.fidelity, it.note});
+        }
+    }
+    lay->addWidget(tree, 1);
+
+    auto *buttons = new QDialogButtonBox(QDialogButtonBox::Close);
+    connect(buttons, &QDialogButtonBox::rejected, &dialog, &QDialog::accept);
+    connect(buttons, &QDialogButtonBox::accepted, &dialog, &QDialog::accept);
+    lay->addWidget(buttons);
+
+    dialog.exec();
 }

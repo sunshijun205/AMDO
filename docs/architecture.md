@@ -80,7 +80,8 @@ AMDO/
 | 学科分析 | `ui/analysispage.*` | `AnalysisPage` | 六学科侧栏+表单；分层持久化分析集 |
 | 学科分析 Presenter | `controller/analysispresenter.*` | `AnalysisPresenter` | 编排加载/保存/校验 |
 | 学科分析 Service | `service/analysisdocumentservice.*` | `AnalysisDocumentService` | 分析集草稿读写 + 配置校验 |
-| 学科分析 数据 | `model/analysis*` | `AnalysisDocument` / `AnalysisStore` / `AnalysisCatalogs` | POD + JSON + 六学科目录 |
+| 学科运行计算 | `service/analysiscomputeservice.*` | `AnalysisComputeService` / `IDisciplineComputer` 及六学科计算器 | 逐学科计算：气动/推进/任务性能含真实项，其余 MOCK（详见 business/analysis_compute.md） |
+| 学科分析 数据 | `model/analysis*` | `AnalysisDocument` / `AnalysisStore` / `AnalysisCatalogs` / `AnalysisRunResult` | POD + JSON + 六学科目录 + 计算结果 |
 | 方案优化 | `ui/designpage.*` | `DesignPage` | 变量/探索/优化/MDO |
 | 方案决策 | `ui/decisionpage.*` | `DecisionPage` | 评价/比较/报告 |
 | 工作流 | `ui/workflowpage.*` | `WorkflowPage` | 编排/执行/监控 |
@@ -105,4 +106,5 @@ AMDO/
 - 设计需求已按 SRD 闭环落地；分析/优化/决策尚未消费 evaluation-spec
 - 方案定义已分层（View→Presenter→Service→Model）；「创建方案版本」除写 `baselines/aircraft_vN.json` 外，同步产出 CPACS 飞机语义主数据 `cpacs/aircraft_Rxxx.cpacs.xml`（简化子集，QXmlStreamWriter）；「冻结分析用例」将当前方案冻结为不可变 `cases/case_N.input.cpacs.xml`（含 `amdo:case` 登记块，对应 CaseSnapshotBuilder）
 - 方案定义尚未派生 STEP/B-Rep/GLB（需 OCCT/TiGL 几何内核，暂不引入）；下游分析/优化/决策三流亦未消费 CPACS/用例快照
-- 学科分析已分层（View→Presenter→Service→Model）：六学科配置为「分析集」，「保存分析集」写 `analysis/analysis_draft.json`、「校验配置」做空值/数值/关联检查；结构在 `AnalysisCatalogs` 目录、文档只存字段取值与对飞机修订/用例的引用；「发布分析集版本」冻结为不可变 `analysis/baselines/analysis_vN.json`，版本选择条支持切草稿/只读基线与「另存为新草稿」；求解器仍未实现
+- 学科分析已分层（View→Presenter→Service→Model）：六学科配置为「分析集」，「保存分析集」写 `analysis/analysis_draft.json`、「校验配置」做空值/数值/关联检查；结构在 `AnalysisCatalogs` 目录、文档只存字段取值与引用（`sourceRevision` 飞机修订 R00N / `sourceSrd` 设计需求基线 srd_vN / `sourceCase` 用例快照，均为下拉选择、引用而非复制）；「发布分析集版本」冻结为不可变 `analysis/baselines/analysis_vN.json`，版本选择条支持切草稿/只读基线与「另存为新草稿」
+- 学科运行计算（`AnalysisComputeService`）：「运行学科计算」按 `sourceRevision` 解析飞机参数；**工况优先取关联 SRD(`sourceSrd`)的飞行包线点（版本条「设计工况」下拉选定），未关联时回退分析集手填**——对齐 PDF「设计工况来自设计需求」。逐学科产出结果写 `analysis/results/analysis_result.json`。**能真算的已真算**：气动(ISA 大气/V/q/AR/Re 精确、L/D 估算)、推进(安装后总推力)、任务性能(起飞/着陆场长余量)；结构/重量/操稳及气动 CL-CD/SFC/航程等**缺求解器或关键输入的仍为 MOCK 占位**。接口已按六学科全面定义，后期逐项替换（TODO 见代码与 `business/analysis_compute.md`）

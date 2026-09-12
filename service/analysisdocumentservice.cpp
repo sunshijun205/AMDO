@@ -98,12 +98,15 @@ bool AnalysisDocumentService::saveValues(const QHash<QString, QString> &values, 
 }
 
 bool AnalysisDocumentService::setReferences(const QString &sourceRevision, const QString &sourceCase,
+                                            const QString &sourceSrd, const QString &sourceCondition,
                                             QString *errorMessage)
 {
     if (!ensureEditable(errorMessage))
         return false;
     m_current.sourceRevision = sourceRevision;
     m_current.sourceCase = sourceCase;
+    m_current.sourceSrd = sourceSrd;
+    m_current.sourceCondition = sourceCondition;
     return persist(errorMessage);
 }
 

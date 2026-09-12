@@ -18,5 +18,6 @@
 | id / 文件 | 业务 | 入口 UI |
 |-----------|------|---------|
 | [srd_requirements.md](srd_requirements.md) | 设计需求 SRD（任务/包线/规范/指标，分层样板） | 主导航「设计需求」 |
+| [analysis_compute.md](analysis_compute.md) | 学科运行计算（六学科接口 + 气动真算 + 其余 MOCK） | 主导航「学科分析」→「运行学科计算」 |
 
 新增业务时：在本目录新增同名 md，并在上表登记一行。

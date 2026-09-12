@@ -49,6 +49,8 @@ struct AnalysisDocument {
     QString publishedAt;     // 发布时间戳（ISO）
     QString sourceRevision;  // 引用的飞机修订，如 R002（不复制方案数据）
     QString sourceCase;      // 引用的用例快照，如 case_1（可空）
+    QString sourceSrd;       // 引用的设计需求基线，如 srd_v1（工况/包线来源，可空）
+    QString sourceCondition; // 选定的设计工况：SRD 包线点索引字符串（空=用分析集手填工况）
     QHash<QString, QString> values; // 键 = domainId/sectionTitle/fieldLabel
     bool loadedKnown = false;
 };

@@ -237,6 +237,20 @@ int AircraftStore::nextCaseNumber() const
     return maxNum + 1;
 }
 
+QStringList AircraftStore::listCaseIds() const
+{
+    QDir dir(casesDir());
+    const QStringList files = dir.entryList(
+        QStringList() << QStringLiteral("case_*.input.cpacs.xml"), QDir::Files, QDir::Name);
+    QStringList ids;
+    QRegExp re(QStringLiteral("^(case_\\d+)\\.input\\.cpacs\\.xml$"));
+    for (int i = 0; i < files.size(); ++i) {
+        if (re.exactMatch(files[i]))
+            ids.append(re.cap(1));
+    }
+    return ids;
+}
+
 bool AircraftStore::readDocumentFile(const QString &path, AircraftDocument *out, QString *errorMessage) const
 {
     if (!out) {

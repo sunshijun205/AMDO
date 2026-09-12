@@ -15,6 +15,7 @@ public:
     bool loadDraft(QString *errorMessage = nullptr);
     bool saveValues(const QHash<QString, QString> &values, QString *errorMessage = nullptr);
     bool setReferences(const QString &sourceRevision, const QString &sourceCase,
+                       const QString &sourceSrd, const QString &sourceCondition,
                        QString *errorMessage = nullptr);
 
     bool publishBaseline(QString *errorMessage = nullptr, AnalysisDocument *publishedOut = nullptr);
