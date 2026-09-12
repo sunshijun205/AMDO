@@ -90,12 +90,20 @@ AMDO/
 | 方案决策 Presenter | `controller/decisionpresenter.*` | `DecisionPresenter` | 选评价对象 → 评价 → 保存 → 刷新比较 |
 | 单方案评价 Service | `service/evaluationservice.*` | `EvaluationService` | 分析结果 ⊗ SRD 需求 → 可行性/裕度/评分；持久化评价结果 + 汇总 |
 | 评价结果 数据 | `model/evaluationresult.h` | `EvaluationItem` / `SchemeEvaluationResult` | 逐指标判定 POD |
-| 工作流 | `ui/workflowpage.*` | `WorkflowPage` | 编排/执行/监控 |
+| 工作流 | `ui/workflowpage.*` | `WorkflowPage` | 流程定义(模板节点清单只读)/执行(模板·基准·重试)/运行监控(节点·耗时·日志·复现) |
+| 工作流 Presenter | `controller/workflowpresenter.*` | `WorkflowPresenter` | 取模板/基准/重试设置 → 运行编排 → 展示节点/汇总/日志 → 刷新历史 |
+| 工作流编排 Service | `service/workflowservice.*` | `WorkflowService` | 多模板顺序执行；逐节点状态/耗时/保真/重试；运行记录 + 历史复现 |
+| 工作流 数据 | `model/workflowtypes.h` | `WorkflowTemplate` / `WorkflowNodeSpec` / `WorkflowNodeResult` / `WorkflowRunResult` | 模板(可编排项)/节点规格/运行结果 POD |
 
 落点：顶栏/导航 → `mainwindow.cpp`；样式 → `theme.h`；某功能 → 对应 page；复用 → `uihelpers`/`chartwidgets`；新业务分层 → 对照 SRD 样板。  
 改导航索引时同步 `updateActions` 文案；改 `objectName` 同步 `Theme`。
 
 - 方案优化（`StudyService`，方案优化页「设计空间探索」）：可选**优化基准**(草稿/analysis_vN)；显示关联 SRD 的**设计约束**；设计变量(S_ref、b)+范围 → 网格采样 → 每点用参数覆盖(`AnalysisComputeService::run(overrides)`)跑分析、复用 `EvaluationService::evaluateWith` 评价 → 汇总并按满足率取最优(`GridBestOptimizer`)，写 `analysis/studies/study_result.json`。「提升最优为飞机方案版本」把最优点覆盖到基准飞机参数并经 `AircraftDocumentService::publishExternalBaseline` 发布为新的 `aircraft_vN` + CPACS 修订（对齐 PDF「提升为新飞机方案版本」）。变量经 S/b→AR→L/D 真实影响气动指标；高级优化(NSGA/梯度/MDO/OpenMDAO)按 `IStudyOptimizer` 接口预留、暂 MOCK/原型。
+
+- 工作流（`WorkflowService`，工作流页「流程定义/执行/运行监控」，**阶段一 + 模板数据模型**）：把现有模块按**预置模板**(可编排项 `WorkflowTemplate` = 一条有序节点链)自动顺序串跑，同步执行；逐节点记录状态(待运行/运行中/完成/失败/跳过)、**耗时**、**保真度**(真实/部分真实/MOCK)、**失败重试**(上限可设)、日志与产物路径，写可复现运行记录 `%AppData%/AMDO/飞机概念设计平台/workflow/run_<时间戳>.json`（`listRuns` 支持历史复现）。
+  - 现有真实模板：`explore「设计空间探索与方案比选」`(载入基准 → 设计空间探索 `StudyService`，默认变量 S、b 网格 4×4 → 结果汇总/比选取最优 → 可选「提升最优为飞机方案版本」`AircraftDocumentService::publishExternalBaseline`)；`single「单方案分析与评价」`(载入基准 → 学科分析计算 `AnalysisComputeService` → 单方案评价 `EvaluationService`)。
+  - 「流程定义」页只读展示所选模板的节点清单(节点/类型/复用模块/产物/保真)与流程图，随「执行」页模板下拉刷新；`promoteBest` 仅对支持提升的模板可用。物理保真沿用各模块现状（气动真实估算，其余 MOCK）。
+  - **未含**：可视化拖拽编排、分支/循环/迭代、并发/HPC/许可证、后台线程实时进度、真 MDO 循环（阶段二/三，按接口预留）。
 
 **未实现**：真正的 MDO 数值后端(OpenMDAO/梯度)、几何内核(OCCT/TiGL)、调度引擎、网络。
 
