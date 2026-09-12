@@ -63,6 +63,7 @@ set(PROJECT_SOURCES
         model/aircraftstore.cpp
         model/analysistypes.h
         model/analysisresult.h
+        model/evaluationresult.h
         model/analysiscatalogs.h
         model/analysiscatalogs.cpp
         model/analysisstore.h
@@ -85,12 +86,16 @@ set(PROJECT_SOURCES
         service/analysisdocumentservice.cpp
         service/analysiscomputeservice.h
         service/analysiscomputeservice.cpp
+        service/evaluationservice.h
+        service/evaluationservice.cpp
         controller/requirementspresenter.h
         controller/requirementspresenter.cpp
         controller/definitionpresenter.h
         controller/definitionpresenter.cpp
         controller/analysispresenter.h
         controller/analysispresenter.cpp
+        controller/decisionpresenter.h
+        controller/decisionpresenter.cpp
         ui/requirementspage.h
         ui/requirementspage.cpp
         ui/definitionpage.h

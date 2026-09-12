@@ -83,7 +83,10 @@ AMDO/
 | 学科运行计算 | `service/analysiscomputeservice.*` | `AnalysisComputeService` / `IDisciplineComputer` 及六学科计算器 | 逐学科计算：气动/推进/任务性能含真实项，其余 MOCK（详见 business/analysis_compute.md） |
 | 学科分析 数据 | `model/analysis*` | `AnalysisDocument` / `AnalysisStore` / `AnalysisCatalogs` / `AnalysisRunResult` | POD + JSON + 六学科目录 + 计算结果 |
 | 方案优化 | `ui/designpage.*` | `DesignPage` | 变量/探索/优化/MDO |
-| 方案决策 | `ui/decisionpage.*` | `DecisionPage` | 评价/比较/报告 |
+| 方案决策 | `ui/decisionpage.*` | `DecisionPage` | 单方案评价 + 方案比较与权衡(真实)/报告(原型) |
+| 方案决策 Presenter | `controller/decisionpresenter.*` | `DecisionPresenter` | 选评价对象 → 评价 → 保存 → 刷新比较 |
+| 单方案评价 Service | `service/evaluationservice.*` | `EvaluationService` | 分析结果 ⊗ SRD 需求 → 可行性/裕度/评分；持久化评价结果 + 汇总 |
+| 评价结果 数据 | `model/evaluationresult.h` | `EvaluationItem` / `SchemeEvaluationResult` | 逐指标判定 POD |
 | 工作流 | `ui/workflowpage.*` | `WorkflowPage` | 编排/执行/监控 |
 
 落点：顶栏/导航 → `mainwindow.cpp`；样式 → `theme.h`；某功能 → 对应 page；复用 → `uihelpers`/`chartwidgets`；新业务分层 → 对照 SRD 样板。  
@@ -103,7 +106,9 @@ AMDO/
 - 启动即构造六页（日后可懒加载，TODO）
 - 闲置 `.ui` 易误导
 - 仅设计需求 SRD 一条链路完成分层，其余仍为原型
-- 设计需求已按 SRD 闭环落地；分析/优化/决策尚未消费 evaluation-spec
+- 设计需求已按 SRD 闭环落地
+- 单方案评价（`EvaluationService`，方案决策页「单方案评价」）：选评价对象（草稿或 `analysis_vN`）→ 跑学科计算取方案值 → 与关联 SRD(`sourceSrd`)需求限值逐条比对，得可行性/裕度/综合评分（满足率）；`responseId↔分析键` 用内置映射表，无映射或无值的需求标「待分析」。评价结果持久化到 `analysis/evaluations/<objectId>.evaluation.json`
+- 方案比较与权衡（决策页「方案比较与权衡」）：汇总 `analysis/evaluations/*.json`，按满足率排序成候选表，并给出可行方案的推荐短名单。方案值多为 MOCK 时判定/评分仅示意（界面标注）；报告生成仍为原型；完整多目标权衡(归一化/TOPSIS)与「方案优化」为后续
 - 方案定义已分层（View→Presenter→Service→Model）；「创建方案版本」除写 `baselines/aircraft_vN.json` 外，同步产出 CPACS 飞机语义主数据 `cpacs/aircraft_Rxxx.cpacs.xml`（简化子集，QXmlStreamWriter）；「冻结分析用例」将当前方案冻结为不可变 `cases/case_N.input.cpacs.xml`（含 `amdo:case` 登记块，对应 CaseSnapshotBuilder）
 - 方案定义尚未派生 STEP/B-Rep/GLB（需 OCCT/TiGL 几何内核，暂不引入）；下游分析/优化/决策三流亦未消费 CPACS/用例快照
 - 学科分析已分层（View→Presenter→Service→Model）：六学科配置为「分析集」，「保存分析集」写 `analysis/analysis_draft.json`、「校验配置」做空值/数值/关联检查；结构在 `AnalysisCatalogs` 目录、文档只存字段取值与引用（`sourceRevision` 飞机修订 R00N / `sourceSrd` 设计需求基线 srd_vN / `sourceCase` 用例快照，均为下拉选择、引用而非复制）；「发布分析集版本」冻结为不可变 `analysis/baselines/analysis_vN.json`，版本选择条支持切草稿/只读基线与「另存为新草稿」
