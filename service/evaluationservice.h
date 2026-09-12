@@ -1,6 +1,7 @@
 #ifndef EVALUATIONSERVICE_H
 #define EVALUATIONSERVICE_H
 
+#include "model/analysisresult.h"
 #include "model/analysistypes.h"
 #include "model/evaluationresult.h"
 
@@ -31,6 +32,13 @@ public:
                                     const QString &objectId,
                                     double tolerancePercent,
                                     QString *errorMessage = nullptr) const;
+
+    // 用已算好的学科分析结果做评价（供设计空间探索复用，避免重复计算）。
+    SchemeEvaluationResult evaluateWith(const AnalysisRunResult &run,
+                                        const AnalysisDocument &analysis,
+                                        const QString &objectId,
+                                        double tolerancePercent,
+                                        QString *errorMessage = nullptr) const;
 
     // 持久化评价结果到 analysis/evaluations/<objectId>.evaluation.json。
     bool saveResult(const SchemeEvaluationResult &result, QString *outPath = nullptr,

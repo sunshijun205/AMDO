@@ -82,7 +82,10 @@ AMDO/
 | 学科分析 Service | `service/analysisdocumentservice.*` | `AnalysisDocumentService` | 分析集草稿读写 + 配置校验 |
 | 学科运行计算 | `service/analysiscomputeservice.*` | `AnalysisComputeService` / `IDisciplineComputer` 及六学科计算器 | 逐学科计算：气动/推进/任务性能含真实项，其余 MOCK（详见 business/analysis_compute.md） |
 | 学科分析 数据 | `model/analysis*` | `AnalysisDocument` / `AnalysisStore` / `AnalysisCatalogs` / `AnalysisRunResult` | POD + JSON + 六学科目录 + 计算结果 |
-| 方案优化 | `ui/designpage.*` | `DesignPage` | 变量/探索/优化/MDO |
+| 方案优化 | `ui/designpage.*` | `DesignPage` | 设计空间探索(真实) + 变量/优化/MDO(原型) |
+| 方案优化 Presenter | `controller/designpresenter.*` | `DesignPresenter` | 取基准分析集 → 运行探索 → 展示 |
+| 设计空间探索 Service | `service/studyservice.*` | `StudyService` / `IStudyOptimizer` | 采样→逐点(覆盖参数→分析→评价)→汇总/取最优 |
+| 探索 数据 | `model/studytypes.h` | `StudyDefinition` / `StudyResult` | 变量/采样/设计点结果 POD |
 | 方案决策 | `ui/decisionpage.*` | `DecisionPage` | 单方案评价 + 方案比较与权衡(真实)/报告(原型) |
 | 方案决策 Presenter | `controller/decisionpresenter.*` | `DecisionPresenter` | 选评价对象 → 评价 → 保存 → 刷新比较 |
 | 单方案评价 Service | `service/evaluationservice.*` | `EvaluationService` | 分析结果 ⊗ SRD 需求 → 可行性/裕度/评分；持久化评价结果 + 汇总 |
@@ -92,7 +95,9 @@ AMDO/
 落点：顶栏/导航 → `mainwindow.cpp`；样式 → `theme.h`；某功能 → 对应 page；复用 → `uihelpers`/`chartwidgets`；新业务分层 → 对照 SRD 样板。  
 改导航索引时同步 `updateActions` 文案；改 `objectName` 同步 `Theme`。
 
-**未实现**：求解器、调度引擎、完整工程文件 IO、网络。
+- 方案优化（`StudyService`，方案优化页「设计空间探索」）：可选**优化基准**(草稿/analysis_vN)；显示关联 SRD 的**设计约束**；设计变量(S_ref、b)+范围 → 网格采样 → 每点用参数覆盖(`AnalysisComputeService::run(overrides)`)跑分析、复用 `EvaluationService::evaluateWith` 评价 → 汇总并按满足率取最优(`GridBestOptimizer`)，写 `analysis/studies/study_result.json`。「提升最优为飞机方案版本」把最优点覆盖到基准飞机参数并经 `AircraftDocumentService::publishExternalBaseline` 发布为新的 `aircraft_vN` + CPACS 修订（对齐 PDF「提升为新飞机方案版本」）。变量经 S/b→AR→L/D 真实影响气动指标；高级优化(NSGA/梯度/MDO/OpenMDAO)按 `IStudyOptimizer` 接口预留、暂 MOCK/原型。
+
+**未实现**：真正的 MDO 数值后端(OpenMDAO/梯度)、几何内核(OCCT/TiGL)、调度引擎、网络。
 
 页面组织与内部接口见 [ui.md](ui.md)。分层约束与样板流程见 [frontend_constraints.md](frontend_constraints.md)。
 

@@ -5,6 +5,7 @@
 #include "model/analysisresult.h"
 #include "model/analysistypes.h"
 
+#include <QHash>
 #include <QString>
 
 class AircraftStore;
@@ -125,6 +126,10 @@ public:
                            SrdStore *srdStore);
 
     AnalysisRunResult run(const AnalysisDocument &analysis, QString *errorMessage = nullptr) const;
+    // 带飞机参数覆盖的运行（设计空间探索用）：按 symbol 覆盖 S_ref/b 等几何参数。
+    AnalysisRunResult run(const AnalysisDocument &analysis,
+                          const QHash<QString, double> &paramOverrides,
+                          QString *errorMessage = nullptr) const;
     bool saveResult(const AnalysisRunResult &result, QString *outPath = nullptr,
                     QString *errorMessage = nullptr) const;
     // 结果文件路径按运行的关联身份命名（贴 PDF）：
@@ -133,7 +138,8 @@ public:
     QString resultPath(const AnalysisRunResult &result) const;
 
 private:
-    AnalysisComputeInputs resolveInputs(const AnalysisDocument &analysis) const;
+    AnalysisComputeInputs resolveInputs(const AnalysisDocument &analysis,
+                                        const QHash<QString, double> &paramOverrides) const;
 
     AircraftStore *m_aircraftStore;
     AnalysisStore *m_analysisStore;

@@ -45,6 +45,18 @@ SchemeEvaluationResult EvaluationService::evaluate(const AnalysisDocument &analy
                                                    double tolerancePercent,
                                                    QString *errorMessage) const
 {
+    AnalysisRunResult run;
+    if (m_compute)
+        run = m_compute->run(analysis);
+    return evaluateWith(run, analysis, objectId, tolerancePercent, errorMessage);
+}
+
+SchemeEvaluationResult EvaluationService::evaluateWith(const AnalysisRunResult &run,
+                                                       const AnalysisDocument &analysis,
+                                                       const QString &objectId,
+                                                       double tolerancePercent,
+                                                       QString *errorMessage) const
+{
     SchemeEvaluationResult res;
     res.objectId = objectId;
     res.evaluatedAt = QDateTime::currentDateTime().toString(Qt::ISODate);
@@ -53,16 +65,13 @@ SchemeEvaluationResult EvaluationService::evaluate(const AnalysisDocument &analy
     res.sourceCase = analysis.sourceCase;
     res.sourceCondition = analysis.sourceCondition;
 
-    // 1) 跑学科计算，得到方案值（键 → 结果项）。
+    // 1) 从已算好的分析结果建立 键 → 结果项。
     QHash<QString, AnalysisResultItem> byKey;
-    if (m_compute) {
-        const AnalysisRunResult run = m_compute->run(analysis);
-        res.aircraftResolved = run.aircraftResolved;
-        for (int i = 0; i < run.disciplines.size(); ++i) {
-            const AnalysisDisciplineResult &d = run.disciplines[i];
-            for (int j = 0; j < d.items.size(); ++j)
-                byKey.insert(d.items[j].key, d.items[j]);
-        }
+    res.aircraftResolved = run.aircraftResolved;
+    for (int i = 0; i < run.disciplines.size(); ++i) {
+        const AnalysisDisciplineResult &d = run.disciplines[i];
+        for (int j = 0; j < d.items.size(); ++j)
+            byKey.insert(d.items[j].key, d.items[j]);
     }
 
     // 2) 读关联 SRD 基线的需求。

@@ -1,13 +1,56 @@
 #include "designpage.h"
+
 #include "chartwidgets.h"
+#include "controller/designpresenter.h"
+#include "model/aircraftstore.h"
+#include "model/analysisstore.h"
+#include "model/srdstore.h"
+#include "model/srdtypes.h"
+#include "service/aircraftcpacsservice.h"
+#include "service/aircraftdocumentservice.h"
+#include "service/analysiscomputeservice.h"
+#include "service/evaluationservice.h"
+#include "service/studyservice.h"
 #include "uihelpers.h"
 
+#include <QComboBox>
 #include <QGridLayout>
 #include <QHBoxLayout>
 #include <QLabel>
+#include <QLineEdit>
 #include <QStackedWidget>
 #include <QVBoxLayout>
 
+static QWidget *makeHostWidget()
+{
+    auto *w = new QWidget;
+    auto *l = new QVBoxLayout(w);
+    l->setContentsMargins(0, 0, 0, 0);
+    l->setSpacing(0);
+    return w;
+}
+
+static void setHostContent(QWidget *host, QWidget *content)
+{
+    if (!host || !host->layout())
+        return;
+    QLayout *l = host->layout();
+    QLayoutItem *item = nullptr;
+    while ((item = l->takeAt(0)) != nullptr) {
+        if (item->widget())
+            item->widget()->deleteLater();
+        delete item;
+    }
+    l->addWidget(content);
+}
+
+static QString numText(double v)
+{
+    return QString::number(v, 'g', 6);
+}
+
+// ---- 设计变量与约束（暂为原型静态展示）------------------------------------
+// TODO：与「设计空间探索」的真实变量表打通（当前探索页自带精简变量编辑）。
 static QWidget *variablesPage(QWidget *parent)
 {
     auto *root = new QWidget(parent);
@@ -35,32 +78,17 @@ static QWidget *variablesPage(QWidget *parent)
     varOpt.firstColumnCheck = true;
     varOpt.chipColumns = {2};
     auto *vars = makePanel();
-    vars->layout()->addWidget(makePanelTitle(QString::fromUtf8("设计变量与范围"), QString::fromUtf8("显示 6 / 18"),
-                                             QString::fromUtf8("在同一张表中管理变量所属学科、边界与采样类型")));
+    vars->layout()->addWidget(makePanelTitle(QString::fromUtf8("设计变量与范围"), QString::fromUtf8("原型示意"),
+                                             QString::fromUtf8("真实可运行的精简变量在「设计空间探索」页")));
     vars->layout()->addWidget(makeTable(
         {QString::fromUtf8("启用"), QString::fromUtf8("变量"), QString::fromUtf8("学科"), QString::fromUtf8("基准值"),
          QString::fromUtf8("下界"), QString::fromUtf8("上界"), QString::fromUtf8("单位"), QString::fromUtf8("类型")},
         {
             {QString(), QString::fromUtf8("翼面积 S"), QString::fromUtf8("气动"), QStringLiteral("124.0"), QStringLiteral("110"), QStringLiteral("145"), QString::fromUtf8("m²"), QString::fromUtf8("连续")},
             {QString(), QString::fromUtf8("展弦比 AR"), QString::fromUtf8("气动"), QStringLiteral("9.4"), QStringLiteral("8.0"), QStringLiteral("11.5"), QString::fromUtf8("—"), QString::fromUtf8("连续")},
-            {QString(), QString::fromUtf8("后掠角 Λ25"), QString::fromUtf8("气动"), QStringLiteral("25.0"), QStringLiteral("18"), QStringLiteral("32"), QStringLiteral("deg"), QString::fromUtf8("连续")},
-            {QString(), QString::fromUtf8("翼盒厚度系数"), QString::fromUtf8("结构"), QStringLiteral("1.00"), QStringLiteral("0.85"), QStringLiteral("1.20"), QString::fromUtf8("—"), QString::fromUtf8("连续")},
-            {QString(), QString::fromUtf8("额定推力"), QString::fromUtf8("推进与能源"), QStringLiteral("118"), QStringLiteral("102"), QStringLiteral("135"), QStringLiteral("kN"), QString::fromUtf8("连续")},
-            {QString(), QString::fromUtf8("巡航马赫数"), QString::fromUtf8("任务与性能"), QStringLiteral("0.78"), QStringLiteral("0.72"), QStringLiteral("0.82"), QStringLiteral("Ma"), QString::fromUtf8("离散")}
+            {QString(), QString::fromUtf8("后掠角 Λ25"), QString::fromUtf8("气动"), QStringLiteral("25.0"), QStringLiteral("18"), QStringLiteral("32"), QStringLiteral("deg"), QString::fromUtf8("连续")}
         }, varOpt));
     vl->addWidget(vars);
-
-    auto *cons = makePanel();
-    cons->layout()->addWidget(makePanelTitle(QString::fromUtf8("设计约束"), QString::fromUtf8("4 项重点约束")));
-    cons->layout()->addWidget(makeTable(
-        {QString::fromUtf8("约束指标"), QString::fromUtf8("关系"), QString::fromUtf8("限制值"), QString::fromUtf8("基准方案"), QString::fromUtf8("状态")},
-        {
-            {QString::fromUtf8("最大起飞重量"), QString::fromUtf8("≤"), QStringLiteral("72,000 kg"), QStringLiteral("68,420 kg"), QString::fromUtf8("满足")},
-            {QString::fromUtf8("起飞场长"), QString::fromUtf8("≤"), QStringLiteral("2,500 m"), QStringLiteral("2,312 m"), QString::fromUtf8("满足")},
-            {QString::fromUtf8("二阶屈曲裕度"), QString::fromUtf8("≥"), QStringLiteral("0.15"), QStringLiteral("0.18"), QString::fromUtf8("临界")},
-            {QString::fromUtf8("静稳定裕度"), QString::fromUtf8("≥"), QStringLiteral("5 %MAC"), QStringLiteral("7.4 %MAC"), QString::fromUtf8("满足")}
-        }));
-    vl->addWidget(cons);
 
     auto *aside = new QWidget;
     auto *al = new QVBoxLayout(aside);
@@ -71,22 +99,13 @@ static QWidget *variablesPage(QWidget *parent)
     type->layout()->addWidget(makePanelTitle(QString::fromUtf8("设计类型")));
     type->layout()->addWidget(makeMiniFields({
         makeSelectField(QString::fromUtf8("模式"), QString::fromUtf8("探索与优化"), {QString::fromUtf8("仅探索"), QString::fromUtf8("仅优化")}),
-        makeSelectField(QString::fromUtf8("变量集"), QString::fromUtf8("MDO 基准变量集"), {QString::fromUtf8("气动专项"), QString::fromUtf8("推进专项")}),
-        makeSelectField(QString::fromUtf8("约束集"), QString::fromUtf8("适航 + 任务约束"), {QString::fromUtf8("仅任务约束")}),
-        makeSelectField(QString::fromUtf8("工况集"), QString::fromUtf8("全任务关键工况"), {QString::fromUtf8("巡航工况")})
+        makeSelectField(QString::fromUtf8("变量集"), QString::fromUtf8("MDO 基准变量集"), {QString::fromUtf8("气动专项")})
     }));
     al->addWidget(type);
-    auto *flt = makePanel();
-    flt->layout()->addWidget(makePanelTitle(QString::fromUtf8("当前筛选")));
-    flt->layout()->addWidget(makeSummary({
-        {QString::fromUtf8("学科"), QString::fromUtf8("跨学科总览")},
-        {QString::fromUtf8("耦合变量"), QString::fromUtf8("6 个")},
-        {QString::fromUtf8("共享响应"), QString::fromUtf8("9 个")}
-    }));
-    al->addWidget(flt);
-    auto *btn = makeButton(QString::fromUtf8("校验设计空间"), true);
-    wireDummyAction(btn, parent);
-    al->addWidget(btn);
+    auto *note = new QLabel(QString::fromUtf8("原型页。真实设计空间探索请见「设计空间探索」标签。"));
+    note->setObjectName(QStringLiteral("NoteLabel"));
+    note->setWordWrap(true);
+    al->addWidget(note);
     al->addStretch();
 
     hl->addWidget(stack, 1);
@@ -95,74 +114,8 @@ static QWidget *variablesPage(QWidget *parent)
     return root;
 }
 
-static QWidget *explorationPage(QWidget *parent)
-{
-    auto *root = new QWidget(parent);
-    auto *lay = new QVBoxLayout(root);
-    lay->setContentsMargins(0, 0, 0, 0);
-    lay->setSpacing(12);
-    lay->addWidget(makeKpis({
-        {QString::fromUtf8("采样方法"), QString::fromUtf8("优化拉丁超立方"), QString()},
-        {QString::fromUtf8("计划样本"), QStringLiteral("240"), QString::fromUtf8("点")},
-        {QString::fromUtf8("可并行任务"), QStringLiteral("12"), QString::fromUtf8("个")},
-        {QString::fromUtf8("预计完成"), QStringLiteral("3.6"), QStringLiteral("h")}
-    }));
-
-    auto *toolbar = new QWidget;
-    auto *tl = new QHBoxLayout(toolbar);
-    tl->setContentsMargins(0, 0, 0, 0);
-    tl->setSpacing(9);
-    tl->addWidget(makeSelectField(QStringLiteral("DOE 方法"), QString::fromUtf8("优化拉丁超立方"),
-                                  {QStringLiteral("Sobol 序列"), QString::fromUtf8("正交试验"), QString::fromUtf8("全因子")}));
-    tl->addWidget(makeField(QString::fromUtf8("样本数量"), QStringLiteral("240")));
-    tl->addWidget(makeField(QString::fromUtf8("随机种子"), QStringLiteral("20260904")));
-    tl->addWidget(makeField(QString::fromUtf8("并行数"), QStringLiteral("12")));
-    tl->addStretch();
-    auto *preview = makeButton(QString::fromUtf8("预览采样"));
-    auto *gen = makeButton(QString::fromUtf8("生成候选方案"), true);
-    wireDummyAction(preview, parent);
-    wireDummyAction(gen, parent);
-    tl->addWidget(preview);
-    tl->addWidget(gen);
-    lay->addWidget(toolbar);
-
-    auto *two = new QWidget;
-    auto *hl = new QHBoxLayout(two);
-    hl->setContentsMargins(0, 0, 0, 0);
-    hl->setSpacing(12);
-    auto *cover = makePanel();
-    cover->layout()->addWidget(makePanelTitle(QString::fromUtf8("设计空间覆盖"), QString::fromUtf8("18 个变量 · 投影：翼载荷 × 推重比")));
-    cover->layout()->addWidget(new ScatterChart);
-    auto *diag = makePanel();
-    diag->layout()->addWidget(makePanelTitle(QString::fromUtf8("采样质量诊断"), QString::fromUtf8("自动更新")));
-    diag->layout()->addWidget(makeSummary({
-        {QString::fromUtf8("最小点间距"), QStringLiteral("0.074")},
-        {QString::fromUtf8("最大相关系数"), QStringLiteral("0.061")},
-        {QString::fromUtf8("空间填充度"), QStringLiteral("94%"), false, true},
-        {QString::fromUtf8("重复设计点"), QStringLiteral("0")}
-    }));
-    diag->layout()->addWidget(makeProgressRow(QString::fromUtf8("候选生成准备度"), QStringLiteral("94%"), 94));
-    hl->addWidget(cover, 1);
-    hl->addWidget(diag, 1);
-    lay->addWidget(two);
-
-    auto *three = new QWidget;
-    auto *th = new QHBoxLayout(three);
-    th->setContentsMargins(0, 0, 0, 0);
-    th->setSpacing(12);
-    auto addList = [&](const QString &title, const QStringList &items) {
-        auto *p = makePanel();
-        p->layout()->addWidget(makePanelTitle(title));
-        p->layout()->addWidget(makeBulletList(items));
-        th->addWidget(p);
-    };
-    addList(QString::fromUtf8("采样范围"), {QString::fromUtf8("连续变量：14"), QString::fromUtf8("离散变量：3"), QString::fromUtf8("构型变量：1")});
-    addList(QString::fromUtf8("分析策略"), {QString::fromUtf8("低保真全量计算"), QString::fromUtf8("关键点高保真校核"), QString::fromUtf8("失败点自动重试 1 次")});
-    addList(QString::fromUtf8("候选方案集"), {QString::fromUtf8("保留全部可行点"), QString::fromUtf8("聚类代表点：24"), QString::fromUtf8("Pareto 候选：预计 12—20")});
-    lay->addWidget(three);
-    return root;
-}
-
+// ---- 优化设计（专业优化算法暂为原型；真实闭环用「设计空间探索」的网格取最优）----
+// TODO：NSGA-II/差分进化/贝叶斯等按 IStudyOptimizer 接口接入（需外部专业库）。
 static QWidget *optimizationPage(QWidget *parent)
 {
     auto *root = new QWidget(parent);
@@ -176,73 +129,28 @@ static QWidget *optimizationPage(QWidget *parent)
         {QString::fromUtf8("最大评估"), QStringLiteral("4,800"), QString::fromUtf8("次")}
     }));
 
-    auto *grid = new QWidget;
-    auto *hl = new QHBoxLayout(grid);
-    hl->setContentsMargins(0, 0, 0, 0);
-    hl->setSpacing(12);
-
-    auto *stack = new QWidget;
-    auto *vl = new QVBoxLayout(stack);
-    vl->setContentsMargins(0, 0, 0, 0);
-    vl->setSpacing(12);
-
+    auto *obj = makePanel();
+    obj->layout()->addWidget(makePanelTitle(QString::fromUtf8("优化目标设置"), QString::fromUtf8("原型示意 · 高级优化算法待接入")));
     TableOptions opt;
     opt.firstColumnCheck = true;
-    auto *obj = makePanel();
-    obj->layout()->addWidget(makePanelTitle(QString::fromUtf8("优化目标设置"), QString::fromUtf8("多目标")));
     obj->layout()->addWidget(makeTable(
         {QString::fromUtf8("启用"), QString::fromUtf8("目标响应"), QString::fromUtf8("方向"), QString::fromUtf8("单位"), QString::fromUtf8("优先权重")},
         {
             {QString(), QString::fromUtf8("任务燃油"), QString::fromUtf8("最小化"), QStringLiteral("kg"), QStringLiteral("1.00")},
-            {QString(), QString::fromUtf8("最大起飞重量"), QString::fromUtf8("最小化"), QStringLiteral("kg"), QStringLiteral("0.75")},
             {QString(), QString::fromUtf8("巡航升阻比"), QString::fromUtf8("最大化"), QString::fromUtf8("—"), QStringLiteral("0.55")}
         }, opt));
-    vl->addWidget(obj);
-
-    auto *sol = makePanel();
-    sol->layout()->addWidget(makePanelTitle(QString::fromUtf8("求解设置")));
-    sol->layout()->addWidget(makeMiniFields({
-        makeSelectField(QString::fromUtf8("优化算法"), QStringLiteral("NSGA-II"), {QStringLiteral("MOEA/D"), QString::fromUtf8("差分进化"), QString::fromUtf8("贝叶斯优化")}),
-        makeField(QString::fromUtf8("初始样本"), QStringLiteral("DOE-240")),
-        makeField(QString::fromUtf8("种群规模"), QStringLiteral("80")),
-        makeField(QString::fromUtf8("迭代代数"), QStringLiteral("60")),
-        makeField(QString::fromUtf8("交叉概率"), QStringLiteral("0.90")),
-        makeField(QString::fromUtf8("变异概率"), QStringLiteral("自动 1/n")),
-        makeField(QString::fromUtf8("并行评估数"), QStringLiteral("12")),
-        makeSelectField(QString::fromUtf8("失败策略"), QString::fromUtf8("罚函数 + 重试"), {QString::fromUtf8("跳过并记录")})
-    }));
-    vl->addWidget(sol);
-
-    auto *aside = new QWidget;
-    auto *al = new QVBoxLayout(aside);
-    al->setContentsMargins(0, 0, 0, 0);
-    al->setSpacing(12);
-    aside->setFixedWidth(270);
-    auto *stop = makePanel();
-    stop->layout()->addWidget(makePanelTitle(QString::fromUtf8("终止条件")));
-    stop->layout()->addWidget(makeCheck(QString::fromUtf8("达到最大评估次数"), true));
-    stop->layout()->addWidget(makeCheck(QString::fromUtf8("超体积连续 8 代无改善"), true));
-    stop->layout()->addWidget(makeCheck(QString::fromUtf8("达到目标阈值"), false));
-    al->addWidget(stop);
-    auto *run = makePanel();
-    run->layout()->addWidget(makePanelTitle(QString::fromUtf8("运行策略")));
-    run->layout()->addWidget(makeSummary({
-        {QString::fromUtf8("缓存复用"), QString::fromUtf8("开启")},
-        {QString::fromUtf8("断点续算"), QString::fromUtf8("每代保存")},
-        {QString::fromUtf8("高保真校核"), QString::fromUtf8("Pareto 前 10")}
-    }));
-    al->addWidget(run);
-    auto *btn = makeButton(QString::fromUtf8("创建优化任务"), true);
-    wireDummyAction(btn, parent);
-    al->addWidget(btn);
-    al->addStretch();
-
-    hl->addWidget(stack, 1);
-    hl->addWidget(aside);
-    lay->addWidget(grid);
+    lay->addWidget(obj);
+    auto *note = new QLabel(QString::fromUtf8(
+        "高级优化算法(NSGA-II/梯度/MDO)需外部专业库，暂按 IStudyOptimizer 接口预留（MOCK）。"
+        "当前真实闭环：在「设计空间探索」网格采样并取最优。"));
+    note->setObjectName(QStringLiteral("NoteLabel"));
+    note->setWordWrap(true);
+    lay->addWidget(note);
+    lay->addStretch();
     return root;
 }
 
+// ---- MDO 求解引擎（需 OpenMDAO 等外部数值后端，暂为原型/MOCK）--------------
 static QWidget *mdoPage(QWidget *parent)
 {
     auto *root = new QWidget(parent);
@@ -255,112 +163,351 @@ static QWidget *mdoPage(QWidget *parent)
         {QString::fromUtf8("耦合变量"), QStringLiteral("9"), QString::fromUtf8("个")},
         {QString::fromUtf8("总导数方式"), QString::fromUtf8("混合"), QString()}
     }));
-
-    auto *grid = new QWidget;
-    auto *hl = new QHBoxLayout(grid);
-    hl->setContentsMargins(0, 0, 0, 0);
-    hl->setSpacing(12);
-
-    auto *stack = new QWidget;
-    auto *vl = new QVBoxLayout(stack);
-    vl->setContentsMargins(0, 0, 0, 0);
-    vl->setSpacing(12);
-
     auto *prob = makePanel();
-    prob->layout()->addWidget(makePanelTitle(QString::fromUtf8("优化问题自动构建"),
-                                             QString::fromUtf8("由设计空间、分析响应和约束映射生成")));
+    prob->layout()->addWidget(makePanelTitle(QString::fromUtf8("优化问题自动构建"), QString::fromUtf8("原型示意")));
     prob->layout()->addWidget(makeMiniFields({
         makeSelectField(QStringLiteral("MDO 架构"), QStringLiteral("MDF"), {QStringLiteral("IDF"), QString::fromUtf8("协同优化 CO")}),
-        makeSelectField(QString::fromUtf8("优化驱动器"), QStringLiteral("SLSQP"), {QStringLiteral("IPOPT"), QStringLiteral("NSGA-II")}),
-        makeField(QString::fromUtf8("设计变量集"), QString::fromUtf8("MDO 基准变量集")),
-        makeField(QString::fromUtf8("响应映射"), QString::fromUtf8("自动发现 21 项")),
-        makeField(QString::fromUtf8("缩放方式"), QString::fromUtf8("基准值归一化")),
-        makeField(QString::fromUtf8("单位一致性"), QString::fromUtf8("严格检查"))
-    }, 3));
-    vl->addWidget(prob);
-
-    auto *coup = makePanel();
-    coup->layout()->addWidget(makePanelTitle(QString::fromUtf8("学科耦合关系"), QString::fromUtf8("行：输出学科 · 列：输入学科")));
-    const QStringList names = {
-        QString::fromUtf8("气动"), QString::fromUtf8("结构"), QString::fromUtf8("重量"),
-        QString::fromUtf8("推进"), QString::fromUtf8("操稳"), QString::fromUtf8("任务")
-    };
-    const int matrix[6][6] = {
-        {0,1,1,1,1,1}, {1,0,1,0,1,0}, {0,1,0,1,1,1},
-        {1,0,1,0,0,1}, {1,0,1,1,0,0}, {1,1,1,1,0,0}
-    };
-    QStringList headers = {QString()};
-    headers += names;
-    QVector<QStringList> rows;
-    for (int i = 0; i < 6; ++i) {
-        QStringList row;
-        row << names[i];
-        for (int j = 0; j < 6; ++j)
-            row << (matrix[i][j] ? QString::fromUtf8("耦合") : QString::fromUtf8("—"));
-        rows << row;
-    }
-    coup->layout()->addWidget(makeTable(headers, rows));
-    vl->addWidget(coup);
-
-    auto *grad = makePanel();
-    grad->layout()->addWidget(makePanelTitle(QString::fromUtf8("导数与梯度计算")));
-    grad->layout()->addWidget(makeMiniFields({
-        makeSelectField(QString::fromUtf8("总导数方法"), QString::fromUtf8("解析/伴随优先"), {QString::fromUtf8("全有限差分")}),
-        makeField(QString::fromUtf8("缺失导数"), QString::fromUtf8("中心差分")),
-        makeField(QString::fromUtf8("相对步长"), QStringLiteral("1e-4")),
-        makeField(QString::fromUtf8("并行导数组"), QStringLiteral("12")),
-        makeField(QString::fromUtf8("导数检查"), QString::fromUtf8("每次基线更新")),
-        makeField(QString::fromUtf8("一致性容差"), QStringLiteral("1e-3"))
-    }));
-    vl->addWidget(grad);
-
-    auto *aside = new QWidget;
-    auto *al = new QVBoxLayout(aside);
-    al->setContentsMargins(0, 0, 0, 0);
-    al->setSpacing(12);
-    aside->setFixedWidth(270);
-    auto *iter = makePanel();
-    iter->layout()->addWidget(makePanelTitle(QString::fromUtf8("迭代与收敛控制")));
-    iter->layout()->addWidget(makeMiniFields({
-        makeSelectField(QStringLiteral("MDA 求解器"), QStringLiteral("Block Gauss-Seidel"), {QStringLiteral("Newton-Krylov")}),
-        makeField(QString::fromUtf8("最大内迭代"), QStringLiteral("40")),
-        makeField(QString::fromUtf8("耦合残差"), QStringLiteral("1e-5")),
-        makeField(QString::fromUtf8("松弛因子"), QStringLiteral("0.65"))
-    }));
-    iter->layout()->addWidget(makeProgressRow(QString::fromUtf8("耦合闭合准备度"), QStringLiteral("91%"), 91));
-    al->addWidget(iter);
-    auto *upd = makePanel();
-    upd->layout()->addWidget(makePanelTitle(QString::fromUtf8("设计点与方案更新")));
-    upd->layout()->addWidget(makeSummary({
-        {QString::fromUtf8("更新策略"), QString::fromUtf8("信赖域")},
-        {QString::fromUtf8("边界处理"), QString::fromUtf8("投影")},
-        {QString::fromUtf8("分析缓存"), QString::fromUtf8("复用")},
-        {QString::fromUtf8("方案版本"), QString::fromUtf8("每 5 代")}
-    }));
-    al->addWidget(upd);
-    auto *chk = makePanel();
-    chk->layout()->addWidget(makePanelTitle(QString::fromUtf8("问题检查")));
-    chk->layout()->addWidget(makeBulletList({
-        QString::fromUtf8("18 个设计变量已缩放"),
-        QString::fromUtf8("3 个导数缺失，使用差分"),
-        QString::fromUtf8("耦合环路已识别"),
-        QString::fromUtf8("目标与约束维度一致")
-    }));
-    al->addWidget(chk);
-    auto *btn = makeButton(QString::fromUtf8("构建并检查 MDO 问题"), true);
-    wireDummyAction(btn, parent);
-    al->addWidget(btn);
-    al->addStretch();
-
-    hl->addWidget(stack, 1);
-    hl->addWidget(aside);
-    lay->addWidget(grid);
+        makeSelectField(QString::fromUtf8("优化驱动器"), QStringLiteral("SLSQP"), {QStringLiteral("IPOPT"), QStringLiteral("NSGA-II")})
+    }, 2));
+    lay->addWidget(prob);
+    auto *note = new QLabel(QString::fromUtf8(
+        "MDO 数值后端(OpenMDAO/伴随导数/耦合求解)属外部专业库，超当前纯前端原型范围，暂为占位。"));
+    note->setObjectName(QStringLiteral("NoteLabel"));
+    note->setWordWrap(true);
+    lay->addWidget(note);
+    lay->addStretch();
     return root;
+}
+
+QWidget *DesignPage::buildExplorationPage()
+{
+    auto *root = new QWidget;
+    auto *lay = new QVBoxLayout(root);
+    lay->setContentsMargins(0, 0, 0, 0);
+    lay->setSpacing(12);
+
+    // 优化基准：草稿 / 已发布分析集版本（其 sourceRevision 决定被优化的飞机）。
+    auto *baseBar = new QWidget;
+    auto *bl = new QHBoxLayout(baseBar);
+    bl->setContentsMargins(0, 0, 0, 0);
+    bl->setSpacing(8);
+    auto *baseLabel = new QLabel(QString::fromUtf8("优化基准"));
+    baseLabel->setObjectName(QStringLiteral("FieldLabel"));
+    m_baseBox = new QComboBox;
+    m_baseBox->setMinimumWidth(240);
+    bl->addWidget(baseLabel);
+    bl->addWidget(m_baseBox);
+    bl->addStretch();
+    lay->addWidget(baseBar);
+    connect(m_baseBox, static_cast<void (QComboBox::*)(int)>(&QComboBox::currentIndexChanged),
+            this, [this](int) { if (!m_updating) reloadConstraints(); });
+
+    // 设计变量编辑（精简：S_ref、b —— 经 S/b→AR→L/D 真实影响气动指标）。
+    auto *varPanel = makePanel();
+    varPanel->layout()->addWidget(makePanelTitle(QString::fromUtf8("设计变量与范围"),
+                                                 QString::fromUtf8("网格采样 · 变量真实影响 AR/L-D")));
+    auto *vg = new QWidget;
+    auto *grid = new QGridLayout(vg);
+    grid->setContentsMargins(0, 0, 0, 0);
+    grid->setHorizontalSpacing(10);
+    grid->setVerticalSpacing(8);
+    auto *h0 = new QLabel(QString::fromUtf8("变量"));
+    auto *h1 = new QLabel(QString::fromUtf8("下界"));
+    auto *h2 = new QLabel(QString::fromUtf8("上界"));
+    auto *h3 = new QLabel(QString::fromUtf8("步数"));
+    h0->setObjectName(QStringLiteral("FieldLabel"));
+    h1->setObjectName(QStringLiteral("FieldLabel"));
+    h2->setObjectName(QStringLiteral("FieldLabel"));
+    h3->setObjectName(QStringLiteral("FieldLabel"));
+    grid->addWidget(h0, 0, 0);
+    grid->addWidget(h1, 0, 1);
+    grid->addWidget(h2, 0, 2);
+    grid->addWidget(h3, 0, 3);
+
+    m_sMin = makeInput(QStringLiteral("110"));
+    m_sMax = makeInput(QStringLiteral("140"));
+    m_sSteps = makeInput(QStringLiteral("4"));
+    grid->addWidget(new QLabel(QString::fromUtf8("机翼面积 S (m²)")), 1, 0);
+    grid->addWidget(m_sMin, 1, 1);
+    grid->addWidget(m_sMax, 1, 2);
+    grid->addWidget(m_sSteps, 1, 3);
+
+    m_bMin = makeInput(QStringLiteral("30"));
+    m_bMax = makeInput(QStringLiteral("37"));
+    m_bSteps = makeInput(QStringLiteral("4"));
+    grid->addWidget(new QLabel(QString::fromUtf8("机翼展长 b (m)")), 2, 0);
+    grid->addWidget(m_bMin, 2, 1);
+    grid->addWidget(m_bMax, 2, 2);
+    grid->addWidget(m_bSteps, 2, 3);
+    varPanel->layout()->addWidget(vg);
+
+    auto *runBar = new QWidget;
+    auto *rl = new QHBoxLayout(runBar);
+    rl->setContentsMargins(0, 0, 0, 0);
+    auto *hint = new QLabel(QString::fromUtf8("总采样点 = 各变量步数之积（上限 500）。基准方案取当前分析集草稿。"));
+    hint->setObjectName(QStringLiteral("NoteLabel"));
+    hint->setWordWrap(true);
+    auto *runBtn = makeButton(QString::fromUtf8("运行探索"), true);
+    connect(runBtn, &QPushButton::clicked, this, &DesignPage::exploreRequested);
+    rl->addWidget(hint, 1);
+    rl->addWidget(runBtn);
+    varPanel->layout()->addWidget(runBar);
+    lay->addWidget(varPanel);
+
+    // 设计约束：来自关联 SRD 的需求（探索按这些约束判可行性）。
+    auto *conPanel = makePanel();
+    conPanel->layout()->addWidget(makePanelTitle(QString::fromUtf8("设计约束"),
+                                                 QString::fromUtf8("来自关联设计需求(SRD) · 探索按此判可行性")));
+    m_constraintHost = makeHostWidget();
+    conPanel->layout()->addWidget(m_constraintHost);
+    lay->addWidget(conPanel);
+
+    m_studyKpiHost = makeHostWidget();
+    lay->addWidget(m_studyKpiHost);
+
+    auto *resPanel = makePanel();
+    resPanel->layout()->addWidget(makePanelTitle(QString::fromUtf8("设计点结果"),
+                                                 QString::fromUtf8("逐点：覆盖 S/b → 分析 → 评价")));
+    m_studyTableHost = makeHostWidget();
+    resPanel->layout()->addWidget(m_studyTableHost);
+    m_bestLabel = new QLabel(QString::fromUtf8("最优方案：—"));
+    m_bestLabel->setWordWrap(true);
+    resPanel->layout()->addWidget(m_bestLabel);
+    auto *promoteBtn = makeButton(QString::fromUtf8("提升最优为飞机方案版本"));
+    connect(promoteBtn, &QPushButton::clicked, this, &DesignPage::promoteRequested);
+    resPanel->layout()->addWidget(promoteBtn);
+    lay->addWidget(resPanel);
+
+    m_status = new QLabel(QString::fromUtf8("就绪：设置变量范围后点「运行探索」。"));
+    m_status->setObjectName(QStringLiteral("PageStatus"));
+    lay->addWidget(m_status);
+
+    // 初始占位。
+    setHostContent(m_studyKpiHost, makeKpis({
+        {QString::fromUtf8("采样点"), QString::fromUtf8("—"), QString()},
+        {QString::fromUtf8("可行点"), QString::fromUtf8("—"), QString()},
+        {QString::fromUtf8("最优评分"), QString::fromUtf8("—"), QString()},
+        {QString::fromUtf8("最优点"), QString::fromUtf8("—"), QString()}
+    }));
+    setHostContent(m_studyTableHost, makeTable(
+        {QString::fromUtf8("点#"), QString::fromUtf8("机翼面积 S"), QString::fromUtf8("机翼展长 b"),
+         QStringLiteral("AR"), QStringLiteral("L/D"), QString::fromUtf8("评分"), QString::fromUtf8("可行性")},
+        {}, TableOptions{}));
+    return root;
+}
+
+QString DesignPage::baseObjectId() const
+{
+    return m_baseBox ? m_baseBox->currentData().toString() : QStringLiteral("draft");
+}
+
+void DesignPage::reloadObjectOptions()
+{
+    if (!m_baseBox || !m_analysisStore)
+        return;
+    m_updating = true;
+    m_baseBox->clear();
+    m_baseBox->addItem(QString::fromUtf8("草稿（可编辑）"), QStringLiteral("draft"));
+    QVector<AnalysisBaselineInfo> baselines;
+    QString detail;
+    if (m_analysisStore->listBaselines(&baselines, &detail)) {
+        for (int i = 0; i < baselines.size(); ++i) {
+            QString label = baselines[i].id;
+            if (baselines[i].version > 0)
+                label += QString::fromUtf8("  v%1").arg(baselines[i].version);
+            m_baseBox->addItem(label, baselines[i].id);
+        }
+    }
+    m_updating = false;
+}
+
+void DesignPage::reloadConstraints()
+{
+    if (!m_constraintHost)
+        return;
+
+    QString srdId;
+    if (m_analysisStore) {
+        AnalysisDocument doc;
+        QString detail;
+        const QString objectId = baseObjectId();
+        const bool ok = (objectId.isEmpty() || objectId == QLatin1String("draft"))
+                            ? m_analysisStore->loadDraft(&doc, &detail)
+                            : m_analysisStore->loadBaseline(objectId, &doc, &detail);
+        if (ok)
+            srdId = doc.sourceSrd;
+    }
+
+    QVector<QStringList> rows;
+    if (!srdId.isEmpty() && m_srdStore) {
+        SrdDocument srd;
+        QString d2;
+        if (m_srdStore->loadBaseline(srdId, &srd, &d2)) {
+            for (int i = 0; i < srd.requirements.size(); ++i) {
+                const SrdRequirement &rq = srd.requirements[i];
+                QString bound = rq.relation;
+                if (rq.boundKnown)
+                    bound += QLatin1Char(' ') + numText(rq.boundValue);
+                if (!rq.unit.isEmpty())
+                    bound += QLatin1Char(' ') + rq.unit;
+                rows.append({
+                    rq.metricName.isEmpty() ? rq.metricId : rq.metricName,
+                    bound,
+                    rq.grade,
+                    rq.domain
+                });
+            }
+        }
+    }
+
+    if (rows.isEmpty()) {
+        auto *lbl = new QLabel(srdId.isEmpty()
+            ? QString::fromUtf8("未关联设计需求（在「学科分析」页关联设计需求后，这里显示约束）。")
+            : QString::fromUtf8("关联的设计需求 %1 暂无约束条目。").arg(srdId));
+        lbl->setObjectName(QStringLiteral("NoteLabel"));
+        lbl->setWordWrap(true);
+        setHostContent(m_constraintHost, lbl);
+        return;
+    }
+    setHostContent(m_constraintHost, makeTable(
+        {QString::fromUtf8("约束指标"), QString::fromUtf8("关系·限值"),
+         QString::fromUtf8("等级"), QString::fromUtf8("学科")},
+        rows, TableOptions{}));
+}
+
+StudyDefinition DesignPage::studyDefinition() const
+{
+    StudyDefinition def;
+    def.sampling = QStringLiteral("grid");
+    def.tolerancePercent = 0.5;
+
+    auto readD = [](QLineEdit *e, double dflt) {
+        bool ok = false;
+        const double v = e ? e->text().toDouble(&ok) : dflt;
+        return ok ? v : dflt;
+    };
+    auto readI = [](QLineEdit *e, int dflt) {
+        bool ok = false;
+        const int v = e ? e->text().toInt(&ok) : dflt;
+        return (ok && v >= 1) ? v : dflt;
+    };
+
+    StudyVariable s;
+    s.symbol = QStringLiteral("S_ref");
+    s.name = QString::fromUtf8("机翼面积 S");
+    s.unit = QString::fromUtf8("m²");
+    s.minValue = readD(m_sMin, 110.0);
+    s.maxValue = readD(m_sMax, 140.0);
+    s.steps = readI(m_sSteps, 4);
+    s.enabled = true;
+
+    StudyVariable b;
+    b.symbol = QStringLiteral("b");
+    b.name = QString::fromUtf8("机翼展长 b");
+    b.unit = QStringLiteral("m");
+    b.minValue = readD(m_bMin, 30.0);
+    b.maxValue = readD(m_bMax, 37.0);
+    b.steps = readI(m_bSteps, 4);
+    b.enabled = true;
+
+    def.variables << s << b;
+    return def;
+}
+
+void DesignPage::showStudyResult(const StudyResult &result)
+{
+    int feasible = 0;
+    for (int i = 0; i < result.points.size(); ++i)
+        if (result.points[i].feasibility == QString::fromUtf8("通过"))
+            ++feasible;
+
+    QString bestScore = QString::fromUtf8("—");
+    QString bestIdxText = QString::fromUtf8("—");
+    QString bestDesc = QString::fromUtf8("—");
+    if (result.bestIndex >= 0 && result.bestIndex < result.points.size()) {
+        const StudyPointResult &bp = result.points[result.bestIndex];
+        if (bp.scoreKnown)
+            bestScore = QString::number(bp.score, 'f', 1);
+        bestIdxText = QString::fromUtf8("#%1").arg(bp.index);
+        QStringList varParts;
+        for (int i = 0; i < result.variables.size(); ++i) {
+            const QString sym = result.variables[i].symbol;
+            varParts << QString::fromUtf8("%1=%2").arg(sym).arg(numText(bp.variables.value(sym)));
+        }
+        bestDesc = QString::fromUtf8("点%1  %2  AR=%3  L/D=%4  评分=%5%  %6")
+                       .arg(bestIdxText, varParts.join(QLatin1Char(' ')),
+                            bp.arKnown ? numText(bp.ar) : QString::fromUtf8("—"),
+                            bp.ldKnown ? numText(bp.ld) : QString::fromUtf8("—"),
+                            bp.scoreKnown ? QString::number(bp.score, 'f', 1) : QString::fromUtf8("—"),
+                            bp.feasibility);
+    }
+
+    setHostContent(m_studyKpiHost, makeKpis({
+        {QString::fromUtf8("采样点"), QString::number(result.points.size()), QString::fromUtf8("个")},
+        {QString::fromUtf8("可行点"), QString::number(feasible), QString::fromUtf8("个")},
+        {QString::fromUtf8("最优评分"), bestScore, bestScore == QString::fromUtf8("—") ? QString() : QStringLiteral("%")},
+        {QString::fromUtf8("最优点"), bestIdxText, QString()}
+    }));
+
+    // 结果表：点# + 各变量 + AR + L/D + 评分 + 可行性。
+    QStringList headers;
+    headers << QString::fromUtf8("点#");
+    for (int i = 0; i < result.variables.size(); ++i)
+        headers << result.variables[i].name;
+    headers << QStringLiteral("AR") << QStringLiteral("L/D")
+            << QString::fromUtf8("评分") << QString::fromUtf8("可行性");
+
+    QVector<QStringList> rows;
+    TableOptions opt;
+    for (int i = 0; i < result.points.size(); ++i) {
+        const StudyPointResult &p = result.points[i];
+        QStringList row;
+        row << QString::number(p.index);
+        for (int v = 0; v < result.variables.size(); ++v)
+            row << numText(p.variables.value(result.variables[v].symbol));
+        row << (p.arKnown ? numText(p.ar) : QString::fromUtf8("—"));
+        row << (p.ldKnown ? numText(p.ld) : QString::fromUtf8("—"));
+        row << (p.scoreKnown ? QString::number(p.score, 'f', 1) + QStringLiteral("%") : QString::fromUtf8("—"));
+        row << p.feasibility;
+        rows.append(row);
+        if (p.feasibility == QString::fromUtf8("违反"))
+            opt.warnRows.append(i);
+    }
+    setHostContent(m_studyTableHost, makeTable(headers, rows, opt));
+
+    if (m_bestLabel)
+        m_bestLabel->setText(QString::fromUtf8("最优方案：") + bestDesc);
+
+    // 刷新约束表，反映当前分析集关联的 SRD。
+    reloadConstraints();
+}
+
+void DesignPage::setStatus(const QString &text, bool isError)
+{
+    if (!m_status)
+        return;
+    m_status->setText(text);
+    m_status->setStyleSheet(isError ? QStringLiteral("color: #b46b22;") : QString());
+}
+
+void DesignPage::showError(const QString &message)
+{
+    setStatus(message, true);
 }
 
 DesignPage::DesignPage(QWidget *parent)
     : QWidget(parent)
 {
+    m_aircraftStore.reset(new AircraftStore);
+    m_aircraftCpacs.reset(new AircraftCpacsService(m_aircraftStore.get()));
+    m_aircraftDoc.reset(new AircraftDocumentService(m_aircraftStore.get(), m_aircraftCpacs.get()));
+    m_srdStore.reset(new SrdStore);
+    m_analysisStore.reset(new AnalysisStore);
+    m_compute.reset(new AnalysisComputeService(m_aircraftStore.get(), m_analysisStore.get(),
+                                               m_srdStore.get()));
+    m_evaluation.reset(new EvaluationService(m_compute.get(), m_srdStore.get(), m_analysisStore.get()));
+    m_study.reset(new StudyService(m_compute.get(), m_evaluation.get(), m_analysisStore.get()));
+
     auto *outer = new QVBoxLayout(this);
     outer->setContentsMargins(0, 0, 0, 0);
     auto *body = new QWidget;
@@ -369,23 +516,23 @@ DesignPage::DesignPage(QWidget *parent)
     lay->setSpacing(14);
     lay->addWidget(makeHeading(
         QString::fromUtf8("方案优化"),
-        QString::fromUtf8("变量、约束、设计空间探索、优化任务与多学科求解统一配置"),
-        QString::fromUtf8("设计空间"),
-        {QString::fromUtf8("MDO 基准设计集 v3"), QString::fromUtf8("巡航效率专项")}));
+        QString::fromUtf8("设计空间探索：采样设计变量 → 逐点分析+评价 → 汇总最优；高级优化(NSGA/MDO)按接口预留"),
+        QString(), {}));
 
     auto *tabs = new SubTabBar({
         {QStringLiteral("variables"), QString::fromUtf8("设计变量与约束")},
         {QStringLiteral("exploration"), QString::fromUtf8("设计空间探索")},
         {QStringLiteral("optimization"), QString::fromUtf8("优化设计")},
         {QStringLiteral("mdo"), QString::fromUtf8("MDO 求解引擎")}
-    }, QStringLiteral("variables"));
+    }, QStringLiteral("exploration"));
     lay->addWidget(tabs, 0, Qt::AlignLeft);
 
     auto *stack = new QStackedWidget;
     stack->addWidget(variablesPage(this));
-    stack->addWidget(explorationPage(this));
+    stack->addWidget(buildExplorationPage());
     stack->addWidget(optimizationPage(this));
     stack->addWidget(mdoPage(this));
+    stack->setCurrentIndex(1); // 默认展示真实的“设计空间探索”
     lay->addWidget(stack, 1);
     connect(tabs, &SubTabBar::currentChanged, this, [stack](const QString &id) {
         if (id == QLatin1String("exploration")) stack->setCurrentIndex(1);
@@ -394,4 +541,11 @@ DesignPage::DesignPage(QWidget *parent)
         else stack->setCurrentIndex(0);
     });
     outer->addWidget(wrapScroll(body));
+
+    reloadObjectOptions();
+    reloadConstraints();
+    m_presenter = new DesignPresenter(this, m_analysisStore.get(), m_study.get(),
+                                      m_aircraftStore.get(), m_aircraftDoc.get(), this);
 }
+
+DesignPage::~DesignPage() = default;

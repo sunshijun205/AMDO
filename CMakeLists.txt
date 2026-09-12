@@ -64,6 +64,7 @@ set(PROJECT_SOURCES
         model/analysistypes.h
         model/analysisresult.h
         model/evaluationresult.h
+        model/studytypes.h
         model/analysiscatalogs.h
         model/analysiscatalogs.cpp
         model/analysisstore.h
@@ -88,6 +89,8 @@ set(PROJECT_SOURCES
         service/analysiscomputeservice.cpp
         service/evaluationservice.h
         service/evaluationservice.cpp
+        service/studyservice.h
+        service/studyservice.cpp
         controller/requirementspresenter.h
         controller/requirementspresenter.cpp
         controller/definitionpresenter.h
@@ -96,6 +99,8 @@ set(PROJECT_SOURCES
         controller/analysispresenter.cpp
         controller/decisionpresenter.h
         controller/decisionpresenter.cpp
+        controller/designpresenter.h
+        controller/designpresenter.cpp
         ui/requirementspage.h
         ui/requirementspage.cpp
         ui/definitionpage.h

@@ -294,6 +294,35 @@ bool AircraftDocumentService::publishBaseline(QString *errorMessage, AircraftDoc
     return true;
 }
 
+bool AircraftDocumentService::publishExternalBaseline(const AircraftDocument &doc,
+                                                      AircraftDocument *publishedOut,
+                                                      QString *errorMessage)
+{
+    const int maxVersion = maxBaselineVersion(errorMessage);
+    if (maxVersion < 0)
+        return false;
+
+    AircraftDocument published = doc;
+    published.version = maxVersion + 1;
+    published.id = QStringLiteral("aircraft_v%1").arg(published.version);
+    published.status = QStringLiteral("published");
+    published.publishedAt = QDateTime::currentDateTime().toString(Qt::ISODate);
+    if (published.schemaVersion.isEmpty())
+        published.schemaVersion = QStringLiteral("amdo.aircraft.v1");
+
+    QString detail;
+    if (!m_store->saveBaseline(published, &detail)) {
+        if (errorMessage)
+            *errorMessage = QString::fromUtf8("发布方案版本失败：%1").arg(detail);
+        return false;
+    }
+    if (!writeCpacsRevision(published, errorMessage))
+        return false;
+    if (publishedOut)
+        *publishedOut = published;
+    return true;
+}
+
 bool AircraftDocumentService::createCaseSnapshot(QString *outPath, QString *errorMessage)
 {
     if (!m_store) {

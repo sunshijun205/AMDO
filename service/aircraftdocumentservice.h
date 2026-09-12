@@ -19,6 +19,10 @@ public:
     bool openBaseline(const QString &id, QString *errorMessage = nullptr);
     bool copyBaselineToDraft(const QString &id, QString *errorMessage = nullptr);
     bool publishBaseline(QString *errorMessage = nullptr, AircraftDocument *publishedOut = nullptr);
+    // 将外部飞机文档（如优化最优点覆盖后的方案）发布为新基线 + CPACS 修订，
+    // 不改动当前草稿。用于「提升为新飞机方案版本」。
+    bool publishExternalBaseline(const AircraftDocument &doc, AircraftDocument *publishedOut = nullptr,
+                                 QString *errorMessage = nullptr);
     bool createCaseSnapshot(QString *outPath = nullptr, QString *errorMessage = nullptr);
 
     bool setSemantics(const AcSemantics &semantics, const QString &title, QString *errorMessage = nullptr);

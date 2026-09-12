@@ -376,7 +376,8 @@ AnalysisComputeService::AnalysisComputeService(AircraftStore *aircraftStore, Ana
 {
 }
 
-AnalysisComputeInputs AnalysisComputeService::resolveInputs(const AnalysisDocument &analysis) const
+AnalysisComputeInputs AnalysisComputeService::resolveInputs(const AnalysisDocument &analysis,
+                                                            const QHash<QString, double> &paramOverrides) const
 {
     AnalysisComputeInputs in;
     in.analysis = analysis;
@@ -441,13 +442,31 @@ AnalysisComputeInputs AnalysisComputeService::resolveInputs(const AnalysisDocume
             }
         }
     }
+
+    // 设计空间探索：按 symbol 覆盖飞机几何参数（S_ref/b 等）。
+    if (!paramOverrides.isEmpty()) {
+        for (int i = 0; i < in.aircraft.parameters.size(); ++i) {
+            AcParameter &p = in.aircraft.parameters[i];
+            if (paramOverrides.contains(p.symbol)) {
+                p.value = paramOverrides.value(p.symbol);
+                p.valueKnown = true;
+            }
+        }
+    }
     return in;
 }
 
 AnalysisRunResult AnalysisComputeService::run(const AnalysisDocument &analysis, QString *errorMessage) const
 {
+    return run(analysis, QHash<QString, double>(), errorMessage);
+}
+
+AnalysisRunResult AnalysisComputeService::run(const AnalysisDocument &analysis,
+                                              const QHash<QString, double> &paramOverrides,
+                                              QString *errorMessage) const
+{
     Q_UNUSED(errorMessage);
-    const AnalysisComputeInputs in = resolveInputs(analysis);
+    const AnalysisComputeInputs in = resolveInputs(analysis, paramOverrides);
 
     AnalysisRunResult result;
     result.runAt = QDateTime::currentDateTime().toString(Qt::ISODate);
